@@ -1,0 +1,22 @@
+# Ruff — configuration de JIBI 2.
+# Les règles désactivées le sont VOLONTAIREMENT, avec la raison :
+line-length = 100
+target-version = "py310"
+exclude = ["donnees"]
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = [
+  "E501",   # lignes longues tolérées (messages en français, catalogues d'outils)
+  "BLE001", # `except Exception` voulu : un outil ne doit JAMAIS faire planter JIBI
+  "S110",   # try/except/pass voulu dans les replis audio/micro (moteur optionnel suivant)
+  "DTZ005", # datetime.now() sans tz : JIBI parle l'heure LOCALE de l'utilisateur
+  "PLW1510",# subprocess check=False voulu : les sorties sont gérées à la main
+  "SIM102", # if imbriqués gardés pour la lisibilité des replis
+  "UP036",  # le garde-fou `sys.version_info < (3, 10)` reste utile à l'exécution
+  "EXE001", # scripts lancés via `python script.py`, pas besoin du bit exécutable
+]
+
+[lint.per-file-ignores]
+# Les tests utilisent des imports après sys.path.insert (donc « after code »).
+"tests/*" = ["E402"]

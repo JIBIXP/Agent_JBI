@@ -1,0 +1,610 @@
+# Changelog de JIBI 2
+
+Toutes les évolutions notables de JIBI 2 — format inspiré de
+[Keep a Changelog](https://keepachangelog.com/fr/), comme le dépôt Jarvis.
+
+## Non publié
+- 2026-09-22 15:50 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 15:50 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 15:50 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 15:50 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:50 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 15:50 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 15:50 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 15:50 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 15:50 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:50 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 15:50 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 15:50 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 15:50 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 15:50 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:50 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 15:50 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:50 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:49 — outil perso « distance_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:49 — outil « distance_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:17 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 15:17 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 15:17 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:17 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 15:17 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:17 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:17 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 15:17 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:17 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:17 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:17 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 15:16 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 15:16 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 15:16 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:16 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 15:16 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 15:16 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 15:16 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 15:16 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:16 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 15:16 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:16 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:04 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 15:04 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 15:04 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:04 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 15:04 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:04 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 15:04 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 15:04 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:04 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:04 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 15:04 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:55 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:55 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:55 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:55 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:55 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:55 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:55 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:55 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:55 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:55 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:55 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:55 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:55 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:55 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:55 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:55 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:49 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:49 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:49 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:49 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:49 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:49 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:49 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:49 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:38 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:38 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:38 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:38 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:38 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:38 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:38 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:38 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:38 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:38 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:38 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:38 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:38 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:37 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:37 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:37 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:37 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:37 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:37 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:37 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:36 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:36 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:36 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:36 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:36 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:36 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:36 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:36 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:36 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:36 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — noyau créé : tests/_piece_test29.py
+- 2026-09-22 14:36 — outil perso « outil_auto29 » retiré (fichier gardé dans historique)
+- 2026-09-22 14:36 — outil « outil_auto29 » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — design modifié : panneau.accent → #12aa55
+- 2026-09-22 14:36 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 14:36 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 14:36 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:36 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:35 — noyau créé : tests/_piece_demo.py — démo noyau acceptée
+- 2026-09-22 14:35 — outil perso « devise_du_jour » retiré (fichier gardé dans historique)
+- 2026-09-22 14:35 — outil « devise_du_jour » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 14:35 — design modifié : panneau.accent → #ff8800
+- 2026-09-22 13:56 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:55 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:55 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:55 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:55 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:55 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:54 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:54 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:54 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:54 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:54 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:54 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:54 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:54 — outil perso « compter_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:54 — outil « compter_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:47 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:47 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:47 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:47 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:47 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:47 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:47 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:42 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:42 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:42 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:42 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:42 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:42 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:42 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:33 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:33 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:33 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:33 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:33 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:33 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:33 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:18 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:18 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:18 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:18 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:18 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:10 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:10 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:10 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:10 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:10 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:10 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:10 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:09 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:09 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:09 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:09 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:09 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:09 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:09 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:09 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:09 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:01 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:01 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 13:01 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 13:01 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 13:01 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:48 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:48 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:48 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:48 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:48 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:48 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:48 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:47 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:47 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:47 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:47 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:47 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:39 — workflow programmé « routine_demo » exécuté automatiquement (12:39)
+- 2026-09-22 12:39 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:39 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:39 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:39 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:39 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:39 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:39 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:39 — outil « traduire_calcul » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:36 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:36 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:36 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:36 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:36 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:36 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:36 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:35 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:35 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:35 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:35 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:35 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:35 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:35 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:34 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:34 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:34 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:34 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:34 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:34 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:34 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:19 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:19 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:19 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:19 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:19 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:19 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:19 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:16 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:16 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 12:16 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 12:16 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:16 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:16 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 12:16 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:54 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:54 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:54 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:54 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:54 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:54 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:54 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:54 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:54 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:24 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:24 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:24 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:24 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:24 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:24 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:24 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:23 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:23 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:23 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:23 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:23 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:23 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:23 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:22 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:22 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:22 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:22 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:22 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:22 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:22 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:11 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:11 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:11 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:11 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:11 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:00 — outil « ajoute_deux » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:00 — outil perso « compteur_mots » retiré (fichier gardé dans historique)
+- 2026-09-22 11:00 — outil « calculer » retiré, version intégrée restaurée
+- 2026-09-22 11:00 — outil « calculer » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:00 — outil « compteur_mots » remplacé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:00 — outil « compteur_mots » activé (risque faible, testé en bac à sable ✅)
+- 2026-09-22 11:00 — outil « compteur_lettres_test » activé (risque faible, testé en bac à sable ✅)
+
+- 2026-09-22 — naissance de JIBI 2 : noyau neuf, 41 outils, workflows,
+  streaming, mains-libres avec fenêtre de suivi, auto-amélioration avec
+  laboratoire (bac à sable), intégrité SHA-256, suite de vérification
+  relançable et ce journal.
+
+## ADD 22 — Fiabilité locale « à la Jarvis » + vitesse
+- Jeu d'outils ADAPTATIF : le modèle ne voit plus les 47 outils d'un coup (leçon Jarvis : petit modèle noyé = lent + appels textualisés) mais un noyau de 19, étendu par mots-clés (écran, fichiers, code, volume, extinction…). Prompt ~2× plus court à chaque tour (10 885 → 4 960 car.).
+- Interrupteur .env JIBI_OUTILS=noyau|tous.
+- Rattrapage JSON, think désactivé, keep_alive -1 : déjà en place (ADD 21).
+- Tests : +4 (domaine 24) → 91/91.
+
+## ADD 23 — Assistance Chrome (CDP local) + lumière amaran
+- outils/chrome.py : lister_onglets, ouvrir_onglet, activer_onglet, fermer_onglet (confirmé, risque élevé), lire_onglet_actif (texte de la page → résumé/traduction par le modèle local). HTTP pur (/json/... CDP), zéro dépendance ; profil dédié « ChromeJIBI » (Chrome 136+), CHROME_JIBI.bat + lancement automatique. Pas d'interaction clic/saisie (usage cloud chez Jarvis) : JIBI ne tape jamais de mot de passe.
+- outils/amaran.py : controler_amaran (allumer/eteindre/luminosite/kelvin/couleur) via pont ESP32 wesbos/amaran-BLE-control (JIBI_AMARAN_URL). Message clair si non configuré. Catégorie « domotique » (13e).
+- Jeu adaptatif : +2 domaines (lumières, onglets/pages). 53 outils.
+- Tests : +12 (serveur CDP et pont amaran factices) → 103/103.
+
+## ADD 24 — Panneau web local + souris + jeux (adapté du dépôt Jarvis)
+- interface/panneau.py + panneau.html : serveur HTTP local (127.0.0.1 uniquement, comme core/serveur chez Jarvis) servant une page de discussion (chat + état + raccourcis, zéro CDN). Démarré par run.py ; outil ouvrir_panneau. JIBI_PANNEAU_PORT.
+- outils/souris.py : deplacer_souris / cliquer_souris (risque élevé = confirmation) / defiler, en fractions d'écran, idée + ctypes repris de Jarvis/souris.py (PR arturod67 réécrite natif Windows). Combo avec voir_ecran.
+- outils/jeux.py : lancer_un_de, pile_ou_face, pierre_feuille_ciseaux, nombre_mystere — 100 % local, absent du dépôt Jarvis (touche JIBI).
+- 61 outils / 14 catégories ; jeu adaptatif +3 domaines. Tests : +11 → 114/114.
+
+## ADD 25 — Vitesse : voie rapide instantanée
+- _voie_rapide dans assistant.py : heure, jour, dé, pile ou face, chifoumi, calcul simple et essais du nombre mystère répondent en ~5 ms SANS passer par le modèle (2-8 s sur CPU) — et ça marche même si Ollama est éteint. Volontairement étroit : passé (« quelle heure était-il hier ? »), alarmes et rappels suivent le chemin normal.
+- Jeu adaptatif mesuré avec 61 outils : catalogue complet 14 689 car. (~3 672 tokens) → noyau 5 148 car. (~1 287 tokens) par tour, soit 2,9× plus léger.
+- Tests : +9 (domaine 27) → 123/123.
+
+## ADD 26 — verifier_mise_a_jour + VERSION
+- Fichier VERSION à la racine ; outil verifier_mise_a_jour (« es-tu à jour ? ») : version locale + vérification distante optionnelle (JIBI_VERSION_URL) + rappel honnête : les outils s'améliorent seuls (validés par l'humain), le noyau ne se remplace jamais tout seul.
+- Domaine adaptatif « mise à jour ». 62 outils.
+- Cycle d'auto-amélioration re-vérifié en direct : proposer → bac à sable (appel d'essai) → valider → utilisé → retirer ✅.
+- Tests : +3 (domaine 28) → 126/126.
+
+## ADD 27 — Autonomie graduée demandée par l'utilisateur
+- Règle : outils/fonctionnalités/design = JIBI décide SEUL ; noyau = permission systématique (« Puis-je le faire ? »).
+- outils/design.py : personnaliser_design (orbe 4 états + panneau, hex validé, reset) → donnees/design.json ; panneau.html recoloré immédiatement (injection CSS), orbe au démarrage (bureau.py relit le design).
+- outils/noyau.py : modifier_noyau (risque élevé → boîte de permission ; sauvegarde dans donnees/historique_noyau, vérif syntaxe, tests complets optionnels avec rollback AUTO si échec) + restaurer_noyau. Interdits absolus : .env, donnees/, modeles/, hors-dossier.
+- jibi2/evolution.py : activer_proposition (risque moyen, autonomie accordée) — la validation humaine devient optionnelle pour les OUTILS, obligatoire pour le NOYAU.
+- Prompt système mis à jour (enseigne l'autonomie + la question de permission). 66 outils / 15 catégories (design).
+- Tests : +11 (domaine 29) → 137/137.
+
+## ADD 28 — Voix au choix (masculine) + parole au fil de l'eau
+- audio/parole.py : CATALOGUE_VOIX (siwis femme, tom/upmc/gilles hommes) + téléchargement direct HuggingFace rhasspy/piper-voices + recharger() (changement de voix SANS redémarrage) + LecteurPhrases (file de phrases, worker unique, parle pendant la génération, couper()).
+- outils/voix.py : changer_voix (liste / télécharge / active, écrit PIPER_MODELE ligne par ligne dans le .env sans rien perdre). Domaine adaptatif « voix ». 67 outils.
+- interface/bureau.py + terminal.py : la voix suit le flux — chaque phrase complète est dite immédiatement ; réponse corrigée après relance → couper + dire la finale.
+- Preuve réelle : tom téléchargé (63,5 Mo) + synthèse WAV validée en bac à sable.
+- Tests : +9 (domaine 30) → 146/146.
+
+## ADD 29 — Chirurgie de vitesse : le pré-remplissage au régime
+- LE tueur de latence CPU identifié : Ollama relit TOUT le prompt à chaque message (prefill). JIBI y stockait les résultats d'outils ENTIERS (pages web 1 500 car.…) et un catalogue bavard.
+- assistant.py : tout message d'historique plafonné à 1 500 car. ; les VIEUX résultats d'outils (hors 2 derniers) compressés à 220 car. ; <think> jamais stocké ; /no_think en fin de prompt (coupe-faim Qwen).
+- Catalogue d'outils COMPACT : descriptions ≤ 120 car., paramètres obligatoires seuls, exemples ≤ 80 car. Noyau 5 148 → 3 736 car., complet 17 424 → 11 652.
+- Tour typique mesuré : ~1 656 tokens (~6 625 car.) contre ~3 100 avant — pré-remplissage ÷2 (÷2,5 depuis l'origine).
+- llm.py : num_predict (JIBI_LLM_MAX=600) borne toute génération qui divague ; num_ctx (JIBI_LLM_CTX=4096) ; payload centralisé dans _corps().
+- docteur.py --vitesse : BENCHMARK réel sur ta machine (chargement, vitesse vécue, tokens/s, prefill tokens/s + conseils honnêtes).
+- Tests : +6 (domaine 31) → 152/152.- JIBI.bat : lanceur double-clic (python run.py) — évite le piège Code Runner de VS Code (echo. sans exécution).
+
+## ADD 30 — Bench du user (5-6 tok/s) → --adopte + historique resserré
+- Chiffres réels reçus : chaud 3,7-3,8 s ✅ ; génération 5,2-6,0 tok/s (goulot confirmé) ; rechargement froid jusqu'à 90,5 s (RAM) ; prefill 61-85 tok/s.
+- docteur.py --adopte : chronomètre TOUS les qwen3.5 installés, déclare le vainqueur et écrit JIBI_LLM_MODEL dans le .env (l'utilisateur lance la commande = sa décision ; JIBI lui-même ne touche jamais au .env).
+- _ecrire_env factorisé dans le docteur ; .env JIBI_HISTOIRE 12 → 6 (levier prefill, documenté).
+- Tests : +3 (domaine 32) → 155/155.
+
+## ADD 31 — Apprendre sur le web → s'améliorer (chaîne prouvée en direct)
+- Démonstration réelle : page Wikipédia lue → outil distance_mots (Levenshtein) fabriqué → bac à sable ✅ → auto-activé → utilisé (chat→chien = 3, correct) → retiré (nettoyage).
+- SYSTEME : nouvelle ligne enseignant « t'instruire sur le WEB puis se fabriquer l'outil, source citée ».
+- Note : DDG bloque les IP datacenter (bac à sable) ; depuis une IP résidentielle la recherche passe, et la lecture directe de page marche toujours.
+- Tests : +2 (domaine 33) → 157/157.

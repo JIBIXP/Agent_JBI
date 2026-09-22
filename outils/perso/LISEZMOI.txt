@@ -1,0 +1,14 @@
+Les outils de ce dossier sont chargés au démarrage de JIBI 2.
+
+C'est ici qu'arrivent les outils PROPOSÉS par JIBI lui-même
+(voir jibi2/evolution.py) — seulement après ta validation :
+    /propositions          → voir les propositions
+    /valider <nom>         → accepter une proposition (elle atterrit ici)
+
+Un outil perso = un fichier Python qui enregistre une fonction :
+
+    from outils import outil
+
+    @outil("bonjour_monde", "Dit bonjour.", {}, categorie="divers")
+    def bonjour_monde() -> str:
+        return "Bonjour !"

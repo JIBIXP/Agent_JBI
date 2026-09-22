@@ -1,0 +1,13 @@
+# JIBI 2 — dépendances optionnelles mais recommandées.
+# Le cerveau (Ollama) et l'interface marchent SANS tout ça ;
+# la voix a besoin de piper-tts + sounddevice, le micro de faster-whisper,
+# la vision d'écran de pillow (+ ollama pull moondream).
+piper-tts>=1.3.0
+faster-whisper
+sounddevice
+numpy
+pyttsx3
+SpeechRecognition
+pillow
+# Wake-word neuronal (optionnel, léger sur CPU) : pip install openwakeword
+# + un modèle dans modeles/wake/ — sinon détection par transcription.
