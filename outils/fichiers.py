@@ -121,7 +121,7 @@ def chercher_fichier(mot: str) -> str:
 @outil("lire_fichier_pc", "Lit un fichier texte N'IMPORTE OÙ sur le PC (lecture seule).",
        {"chemin": {"type": "str", "obligatoire": True,
                    "description": "chemin complet, ex. C:/Users/moi/Documents/notes.txt"}},
-       categorie="fichiers", risque="moyen")
+       categorie="fichiers", risque="eleve")
 def lire_fichier_pc(chemin: str) -> str:
     cible = Path(chemin).expanduser()
     if not cible.is_file():
@@ -135,7 +135,7 @@ def lire_fichier_pc(chemin: str) -> str:
 @outil("lister_dossier_pc", "Liste le contenu d'un dossier N'IMPORTE OÙ sur le PC (lecture seule).",
        {"chemin": {"type": "str", "obligatoire": False,
                    "description": "chemin complet ; vide = dossier personnel"}},
-       categorie="fichiers", risque="moyen")
+       categorie="fichiers", risque="eleve")
 def lister_dossier_pc(chemin: str = "") -> str:
     cible = Path(chemin).expanduser() if chemin else Path.home()
     if not cible.is_dir():

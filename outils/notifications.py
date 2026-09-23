@@ -16,8 +16,12 @@ derniere: list[str] = []
 
 def notifier_systeme(titre: str, message: str) -> bool:
     """Envoie une notification OS. Renvoie True si un canal a fonctionné."""
-    titre = titre.replace('"', "'").replace("\n", " ")[:80]
-    message = message.replace('"', "'").replace("\n", " ")[:200]
+    def _nettoyer(texte: str, longueur: int) -> str:
+        return (texte.replace('"', "'").replace("\n", " ")
+                .replace("$", "").replace("`", "'"))[:longueur]
+
+    titre = _nettoyer(titre, 80)
+    message = _nettoyer(message, 200)
     if sys.platform == "win32":
         try:
             import subprocess

@@ -103,7 +103,11 @@ class Assistant:
     def __init__(self, memoire: Memoire, garde: Garde, sur_rappel=None) -> None:
         self.memoire = memoire
         self.garde = garde
-        self.client = llm.ClientLLM()
+        # Routeur local/cloud : bascule automatiquement vers OpenRouter pour
+        # les demandes complexes (voir jibi2/llm.py → ClientRouteur), avec
+        # repli sur le cloud si Ollama est indisponible. Comportement inchangé
+        # si JIBI_CLOUD_AUTO=0 ou si OPENROUTER_API_KEY est absente du .env.
+        self.client = llm.ClientRouteur()
         self.histoire: list[dict] = []
         self.max_histoire = max(4, _entier("JIBI_HISTOIRE", 12))
         self._noms_outils: list[str] | None = None   # jeu adaptatif (None = tous)

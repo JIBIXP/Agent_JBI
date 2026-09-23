@@ -1,8 +1,9 @@
-"""Client Ollama de JIBI 2 — uniquement la bibliothèque standard (urllib).
+"""Client LLM de JIBI 2 — cerveau local (Ollama) + cerveau cloud (OpenRouter).
 
-Gère : disponibilité, modèles installés, chat avec `think` désactivé
-(indispensable avec qwen3.5 : sans quoi le modèle « réfléchit » en texte,
-ce qui est lent et rend les appels d'outils illisibles).
+ClientLLM   : inchangé, parle à Ollama en local (bibliothèque standard).
+ClientCloud : même interface, parle à OpenRouter (API compatible OpenAI).
+ClientRouteur : choisit automatiquement local ou cloud selon la complexité
+                de la demande, et bascule aussi si le local échoue.
 """
 from __future__ import annotations
 
@@ -47,7 +48,7 @@ def _keep_alive() -> str:
     et chaque échange paie 30-60 s de rechargement sur CPU.
     """
     brut = config.valeur("JIBI_KEEP_ALIVE", "30m").strip() or "30m"
-    if brut in ("-1", "toujours", "toujours"):
+    if brut in ("-1", "toujours"):
         return -1
     if brut.isdigit():
         return f"{brut}m"
@@ -64,6 +65,8 @@ def nettoyer_think(texte: str) -> str:
 
 
 class ClientLLM:
+    """Cerveau local : Ollama, sur le PC de l'utilisateur."""
+
     def __init__(self, url: str | None = None, modele: str | None = None) -> None:
         self.url = (url or config.valeur("JIBI_LLM_URL")).rstrip("/")
         self.modele = modele or config.valeur("JIBI_LLM_MODEL", "qwen3.5:4b")
@@ -213,3 +216,232 @@ class ClientLLM:
         except urllib.error.URLError as e:
             raise ErreurLLM(f"Ollama ne répond pas sur {self.url}.") from e
         return nettoyer_think(complet).strip()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Cerveau cloud : OpenRouter (API compatible OpenAI)
+# ═══════════════════════════════════════════════════════════════════════
+
+class ClientCloud:
+    """Cerveau distant via OpenRouter — même interface que ClientLLM.
+
+    Sert de repli pour les tâches complexes (voir ClientRouteur plus bas).
+    Gratuit avec les modèles ":free" d'OpenRouter (ex. deepseek/deepseek-chat),
+    à condition de rester sous leur limite de débit.
+    """
+
+    URL_API = "https://openrouter.ai/api/v1/chat/completions"
+
+    def __init__(self, cle: str | None = None, modele: str | None = None) -> None:
+        self.cle = cle or config.valeur("OPENROUTER_API_KEY", "")
+        self.modele = modele or config.valeur("JIBI_CLOUD_MODEL", "deepseek/deepseek-chat")
+
+    def disponible(self) -> bool:
+        return bool(self.cle)
+
+    def _entetes(self) -> dict:
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.cle}",
+            # Recommandés par OpenRouter (facultatifs mais évitent d'être bridé) :
+            "HTTP-Referer": "https://github.com/JIBIXP",
+            "X-Title": "JIBI",
+        }
+
+    def _corps(self, messages: list[dict], temperature: float, stream: bool) -> dict:
+        return {
+            "model": self.modele,
+            "messages": messages,
+            "stream": stream,
+            "temperature": temperature,
+            "max_tokens": _entier("JIBI_CLOUD_MAX", 1200),
+        }
+
+    def _requete(self, corps: dict) -> urllib.request.Request:
+        return urllib.request.Request(
+            self.URL_API,
+            data=json.dumps(corps).encode("utf-8"),
+            headers=self._entetes(),
+            method="POST",
+        )
+
+    def _lever_erreur_http(self, e: urllib.error.HTTPError) -> None:
+        if e.code == 401:
+            raise ErreurLLM("Clé OPENROUTER_API_KEY invalide ou absente du .env.") from e
+        if e.code == 429:
+            raise ErreurLLM(
+                "Limite de débit OpenRouter atteinte (modèle gratuit). "
+                "Réessaie dans un instant, ou repasse en local."
+            ) from e
+        raise ErreurLLM(f"OpenRouter a répondu une erreur HTTP {e.code}.") from e
+
+    def discuter(self, messages: list[dict], temperature: float = 0.4) -> str:
+        if not self.disponible():
+            raise ErreurLLM("OPENROUTER_API_KEY absente du .env : le cloud n'est pas configuré.")
+        corps = self._corps(messages, temperature, stream=False)
+        try:
+            with urllib.request.urlopen(self._requete(corps), timeout=120) as rep:
+                donnees = json.loads(rep.read().decode("utf-8"))
+        except json.JSONDecodeError as e:
+            raise ErreurLLM("La réponse d'OpenRouter est illisible.") from e
+        except urllib.error.HTTPError as e:
+            self._lever_erreur_http(e)
+        except urllib.error.URLError as e:
+            raise ErreurLLM(f"OpenRouter injoignable (connexion ?) : {e}") from e
+        choix = (donnees.get("choices") or [{}])[0]
+        contenu = (choix.get("message") or {}).get("content", "")
+        return nettoyer_think(contenu).strip()
+
+    def _lire_flux_sse(self, reponse, on_chunk) -> str:
+        """Lit un flux SSE ("data: {...}" par ligne, terminé par "data: [DONE]")."""
+        morceaux: list[str] = []
+        for ligne_brute in reponse:
+            ligne = ligne_brute.decode("utf-8", errors="replace").strip()
+            if not ligne or not ligne.startswith("data:"):
+                continue
+            charge = ligne[len("data:"):].strip()
+            if charge == "[DONE]":
+                break
+            try:
+                donnees = json.loads(charge)
+            except json.JSONDecodeError:
+                continue
+            delta = ((donnees.get("choices") or [{}])[0].get("delta") or {}).get("content", "")
+            if delta:
+                morceaux.append(delta)
+                if on_chunk is not None:
+                    on_chunk(delta)
+        return "".join(morceaux)
+
+    def discuter_stream(self, messages: list[dict], temperature: float = 0.4,
+                        on_chunk=None) -> str:
+        if not self.disponible():
+            raise ErreurLLM("OPENROUTER_API_KEY absente du .env : le cloud n'est pas configuré.")
+        corps = self._corps(messages, temperature, stream=True)
+        try:
+            with urllib.request.urlopen(self._requete(corps), timeout=120) as reponse:
+                complet = self._lire_flux_sse(reponse, on_chunk)
+        except urllib.error.HTTPError as e:
+            self._lever_erreur_http(e)
+        except urllib.error.URLError as e:
+            raise ErreurLLM(f"OpenRouter injoignable (connexion ?) : {e}") from e
+        return nettoyer_think(complet).strip()
+
+
+# ═══════════════════════════════════════════════════════════════════════
+#  Routeur : choisit local ou cloud automatiquement
+# ═══════════════════════════════════════════════════════════════════════
+
+# Signaux textuels d'une demande "complexe" (code, raisonnement multi-étapes,
+# analyse poussée) — volontairement large plutôt que parfait : un faux positif
+# occasionnel (bascule cloud pour une question simple) coûte peu ; un faux
+# négatif renvoie juste vers le comportement actuel (tout en local).
+_MOTS_COMPLEXES = (
+    "debug", "déboguer", "corrige le code", "corrige ce code", "erreur dans le code",
+    "algorithme", "optimise", "optimiser", "refactore", "refactoriser",
+    "analyse en détail", "analyse approfondie", "explique en détail",
+    "étape par étape", "plan détaillé", "raisonnement", "démontre",
+    "compare en détail", "architecture logicielle",
+)
+_SEUIL_MOTS = 80  # longueur (en mots) au-delà de laquelle on considère la demande complexe
+
+
+def _demande_complexe(texte: str) -> bool:
+    minuscule = texte.lower()
+    if "```" in texte:
+        return True
+    if any(mot in minuscule for mot in _MOTS_COMPLEXES):
+        return True
+    return len(texte.split()) > _SEUIL_MOTS
+
+
+class ClientRouteur:
+    """Choisit ClientLLM (local) ou ClientCloud (OpenRouter) automatiquement.
+
+    Règles, dans l'ordre :
+    1. Si JIBI_CLOUD_AUTO=0 dans le .env → toujours local (comportement actuel).
+    2. Si la demande est jugée complexe (_demande_complexe) ET que le cloud
+       est configuré (clé présente) → cloud direct.
+    3. Sinon → local ; si le local échoue (Ollama éteint, modèle absent...)
+       ET que le cloud est configuré → repli automatique sur le cloud.
+    """
+
+    def __init__(self) -> None:
+        self.local = ClientLLM()
+        self.cloud = ClientCloud()
+        self.auto_actif = config.valeur_bool("JIBI_CLOUD_AUTO")
+        self.dernier_moteur = "local"  # exposé pour affichage ("JIBI (cloud) › ...")
+
+    def _choisir(self, texte_utilisateur: str) -> ClientLLM | ClientCloud:
+        if not self.auto_actif or not self.cloud.disponible():
+            self.dernier_moteur = "local"
+            return self.local
+        if _demande_complexe(texte_utilisateur):
+            self.dernier_moteur = "cloud"
+            return self.cloud
+        self.dernier_moteur = "local"
+        return self.local
+
+    @staticmethod
+    def _dernier_texte_utilisateur(messages: list[dict]) -> str:
+        for m in reversed(messages):
+            if m.get("role") == "user":
+                return m.get("content", "")
+        return ""
+
+    def discuter(self, messages: list[dict], temperature: float = 0.4) -> str:
+        texte = self._dernier_texte_utilisateur(messages)
+        moteur = self._choisir(texte)
+        try:
+            return moteur.discuter(messages, temperature)
+        except ErreurLLM:
+            if moteur is self.local and self.cloud.disponible():
+                self.dernier_moteur = "cloud"
+                return self.cloud.discuter(messages, temperature)
+            raise
+
+    def _stream_sans_risque_cloud(self, messages: list[dict], temperature: float,
+                                   on_chunk) -> str:
+        """Le cloud n'émet pas de manière fiable un JSON qui commence pile par
+        « { » (préambule, blocs ```json… selon le modèle gratuit tombé) — ça
+        casse la détection de silence d'assistant.py (_garde_flux), qui se
+        met alors à afficher/dire le flux brut EN PLUS de la réponse finale
+        nettoyée juste après → effet de « deux réponses en même temps ».
+        Parade : on récupère la réponse cloud d'un seul bloc (pas de vrai
+        streaming), puis on l'émet en un seul appel à on_chunk — l'appelant
+        (assistant.py) la traite alors exactement comme avant, silencieuse
+        tant qu'elle commence par « { »."""
+        complet = self.cloud.discuter(messages, temperature)
+        if on_chunk is not None and complet:
+            on_chunk(complet)
+        return complet
+
+    def discuter_stream(self, messages: list[dict], temperature: float = 0.4,
+                        on_chunk=None) -> str:
+        texte = self._dernier_texte_utilisateur(messages)
+        moteur = self._choisir(texte)
+        try:
+            if moteur is self.cloud:
+                return self._stream_sans_risque_cloud(messages, temperature, on_chunk)
+            return moteur.discuter_stream(messages, temperature, on_chunk=on_chunk)
+        except ErreurLLM:
+            if moteur is self.local and self.cloud.disponible():
+                self.dernier_moteur = "cloud"
+                return self._stream_sans_risque_cloud(messages, temperature, on_chunk)
+            raise
+
+    # ------------------------------------------------------- délégué au local
+    # (le "modèle installé / serveur joignable" ne concerne que le local ;
+    #  l'affichage d'entête de la console continue de fonctionner tel quel)
+    def etat(self, force: bool = False) -> tuple[bool, list[str], str]:
+        return self.local.etat(force)
+
+    def disponible(self) -> bool:
+        return self.local.disponible() or self.cloud.disponible()
+
+    def modele_present(self) -> bool:
+        return self.local.modele_present()
+
+    @property
+    def modele(self) -> str:
+        return self.local.modele

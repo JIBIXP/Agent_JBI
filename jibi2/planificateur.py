@@ -74,7 +74,7 @@ def _cycle() -> None:
 def _boucle(stop: threading.Event) -> None:
     while not stop.is_set():
         try:
-            if config.valeur_bool("JIBI_HORAIRE_ACTIF", "1") if hasattr(config, "valeur_bool") else True:
+            if config.valeur_bool("JIBI_HORAIRE_ACTIF"):
                 _cycle()
         except Exception as e:  # le planificateur ne doit jamais tuer JIBI
             print(f"(planificateur : {e})")

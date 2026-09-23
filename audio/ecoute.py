@@ -18,7 +18,7 @@ ERREUR_DERNIERE = ""
 
 def micro_disponible() -> bool:
     try:
-        import sounddevice as sd
+        import sounddevice as sd  # type: ignore[import-not-found]
         entree = sd.default.device[0] if sd.default.device else None
         if entree is None:
             entree = sd.query_devices(kind="input")  # type: ignore[call-arg]
@@ -33,7 +33,7 @@ def _charger_whisper():
     if _modele_whisper is not None:
         return _modele_whisper
     try:
-        from faster_whisper import WhisperModel
+        from faster_whisper import WhisperModel  # type: ignore[import-not-found]
     except ImportError:
         ERREUR_DERNIERE = "Le paquet faster-whisper n'est pas installé (pip install faster-whisper)."
         return None
@@ -58,6 +58,9 @@ def transcrire(chemin_audio: str | Path) -> str:
     global ERREUR_DERNIERE
     chemin_audio = str(chemin_audio)
     moteur = config.valeur("STT_ENGINE", "faster_whisper").lower()
+    if moteur == "aucun":
+        ERREUR_DERNIERE = "STT désactivé (STT_ENGINE=aucun)."
+        return ""
     if moteur != "google":
         modele = _charger_whisper()
         if modele is not None:
@@ -66,11 +69,9 @@ def transcrire(chemin_audio: str | Path) -> str:
                 return " ".join(s.text.strip() for s in segments).strip()
             except Exception as e:
                 ERREUR_DERNIERE = f"Whisper a échoué : {e}"
-        if moteur == "faster_whisper" and ERREUR_DERNIERE:
-            return ""
     # Repli (ou choix) : reconnaissance Google via SpeechRecognition si dispo.
     try:
-        import speech_recognition as sr
+        import speech_recognition as sr  # type: ignore[import-not-found]
         with sr.AudioFile(chemin_audio) as source:
             audio = sr.Recognizer().record(source)
         return sr.Recognizer().recognize_google(audio, language="fr-FR")
@@ -87,7 +88,7 @@ def ecouter_phrase(timeout: float = 8.0, silence: float = 1.2, limite: float = 1
     global ERREUR_DERNIERE
     try:
         import numpy as np
-        import sounddevice as sd
+        import sounddevice as sd  # type: ignore[import-not-found]
     except ImportError:
         ERREUR_DERNIERE = "sounddevice/numpy requis pour le micro (pip install sounddevice numpy)."
         return ""
