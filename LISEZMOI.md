@@ -14,27 +14,42 @@ JIBI2/
 │   ├── llm.py             client Ollama (think off, streaming, erreurs en français)
 │   ├── assistant.py       le cerveau : JSON outil/réponse + relance corrective
 │   ├── memoire.py         SQLite : sessions, messages, notes, faits
-│   ├── evolution.py       auto-amélioration : proposer, tester, valider, CHANGELOG
-│   ├── labo.py            bac à sable (10 s, processus séparé) + analyse du code de JIBI
+│   ├── evolution.py       auto-amélioration : proposer, tester, activer, CHANGELOG
+│   ├── autonomie.py       cycle d'apprentissage web + noyau transactionnel
+│   ├── sources.py         recherche web publique + provenance des sources
+│   ├── progression.py     jauge d'évolution partagée par le bureau et le panneau
+│   ├── audit.py           journal append-only et chaîne de hachage
+│   ├── labo.py            bac à sable (10 s, processus séparé) + politique AST
 │   ├── planificateur.py   workflows programmés (« chaque jour à 08:00 »)
-│   └── securite.py        RIEN de risqué sans ton autorisation
-├── outils/              ← 67 outils (15 catégories), jeu adaptatif : noyau 20 + extension par mots-clés
-│   ├── fichiers.py (8)  systeme.py (10)  applications.py (2)  web.py (2)
+│   └── securite.py        garde des actions sensibles + autonomie du code
+├── outils/              ← 111 outils (18 catégories), jeu adaptatif : noyau 24 + extension par mots-clés
+│   ├── fichiers.py (8)  systeme.py (10)  applications.py (2)  web.py (5)
 │   ├── notes.py (4)     memoire_faits.py (2)  calcul.py (1)  rappels.py (3)
 │   ├── workflows.py (4) : routines, exécutables à heure fixe (« ⏰ 08:00 »)
-│   ├── vision.py (1)    : voir_ecran — capture + modèle de vision CPU (moondream)
+│   ├── vision.py (2)    : voir_ecran / voir_image — capture ou image locale + modèle de vision CPU (moondream)
+│   ├── navigateur.py (7): Browser Use local + recherche vidéo/musique/site + navigation autonome
 │   ├── documents.py (2) : creer_pdf + creer_word — vrais documents, sans dépendance
+│   ├── analyse.py (3)   : analyser_fichier + analyser_dossier + recherche PC
+│   ├── bureautique.py (3): créer/analyser Excel + analyse de documents
+│   ├── localisation.py (2): position approximative et lieux proches
+│   ├── traduction.py (2): traduire + langues_disponibles — 16 langues, Ollama ou dictionnaire de base
+│   ├── imports.py (2)   : importer_fichier, importer_image — import sécurisé PC → JIBI
+│   └── __init__.py      : registre NOYAU (24 outils) + DOMAINES (patterns contextuels)
+├── interface/           ← bureau.py (barre auto-étendue, icônes), terminal.py (commandes /)
+│   ├── signaux.py (3)   : tableau de santé, réseau et vérifications winget
 │   ├── méta auto-amélioration : proposer_nouvel_outil, lister_erreurs,
-│   │     lire_code_outil, tester_proposition, lancer_verification
+│   │     lire_code_outil, lire_code_noyau, tester_proposition, lancer_verification,
+│   │     modifier_noyau, ameliorer_autonomement, configurer_autonomie,
+│   │     consulter_audit
 │   └── perso/           ← tes outils + ceux validés de JIBI
 ├── audio/               ← la voix
 │   ├── parole.py          Piper local (fr) → pyttsx3 en secours
 │   ├── ecoute.py          faster-whisper local → Google en secours
 
 ├── interface/
-│   ├── bureau.py          LA BOULE : orbe animée (repos/écoute/réflexion/parole),
-│   │                      streaming, rappels, autorisations, ⟳ reprise de session,
-│   │                      ✍️ dictée en continu (dis « envoie » pour partir) — Tkinter pur
+│   ├── theme.py           palette, polices, espacements et metrics UI
+│   ├── bureau.py          barre latérale rétractable + zone principale : orbe animée,
+│   │                      chat, voix, bibliothèque intégrée, sessions et documents — Tkinter pur
 │   └── terminal.py        console avec /commandes
 ├── CHANGELOG.md          ← journal des évolutions (tenu par JIBI lui-même)
 ├── modeles/voix/        ← voix Piper (.onnx) — docteur.py --installer-voix
@@ -70,55 +85,72 @@ python run.py --mains-libres     « jibi, quelle heure est-il ? » au micro
 
 Exemples : « quelle heure est-il ? » · « calcule 144/12 » · « prends note
 que je dois appeler le garage » · « retiens que ma ville est Rennes » ·
-« cherche le prix d'une 4070 sur le web » · « ouvre la calculatrice » ·
-« liste mes notes » · « rappelle-moi dans 15 minutes de sortir le four » ·
-« quels fichiers ai-je dans mon espace ? » · « regarde mon écran, quelle
-application est ouverte ? » · « crée une routine du matin à 8 h qui me
-donne l'heure et mes notes » (elle s'exécutera toute seule chaque jour) ·
-« tes outils ont eu des erreurs ? analyse, propose et teste une correction ».
+« cherche le prix d'une 4070 sur le web » · « ouvre mon compte Google » ·
+« ouvre la calculatrice » · « liste mes notes » · « rappelle-moi dans
+15 minutes de sortir le four » · « tes outils ont eu des erreurs ? analyse,
+propose, teste et active une correction » · « améliore-toi sur les rappels ».
+
+Dans la console :
+- `/autonomie` — état de l'apprentissage autonome ;
+- `/autonomie on 04:00` — active un cycle quotidien à 4 h ;
+- `/ameliorer` — lance un cycle immédiat ;
+- `/tester`, `/valider`, `/retirer`, `/verif` — pilotage des propositions.
 
 Streaming : la réponse s'affiche mot à mot pendant la génération
 (JIBI_FLUX=1 par défaut ; mets 0 dans le .env pour l'ancien comportement).
 Mains-libres : après une réponse, tu enchaînes sans redire « jibi »
 pendant 60 s (JIBI_FENETRE_SUIVI). « stop » ou « au revoir » termine.
 
-## Sécurité — ce que JIBI ne peut pas faire tout seul
+## Sécurité — autonomie de code activée
 
-- Les **écritures de fichiers** restent dans `donnees/fichiers/`
-  (le reste du PC est lisible seulement, outil par outil, à risque « moyen »).
-- Les actions **à risque élevé** (`executer_commande`, `eteindre_pc`)
-  demandent ta confirmation (`CONFIRMER_RISQUES=1`, défaut).
-- La suppression = **corbeille** `donnees/corbeille/` (récupérable).
-- Les outils **proposés par JIBI** ne s'exécutent qu'après
-  `/valider <nom>` — et il faut quand même les relire.
+- Les écritures utilisateur restent dans `donnees/fichiers/` ; `.env`,
+  `donnees/`, `modeles/` et tout chemin extérieur au projet ne sont jamais
+  modifiables par l'auto-amélioration.
+- `JIBI_MODIFICATION_AUTO=1` autorise JIBI à modifier **et restaurer** son
+  propre code sans redemander à chaque fois. Chaque écriture est atomique,
+  sauvegardée, vérifiée et rollbackée si la suite de tests échoue.
+- Les actions système dangereuses (`executer_commande`, `eteindre_pc`, etc.)
+  conservent leur confirmation habituelle.
+- Un outil généré est filtré par AST : un seul décorateur, aucun import
+  système/réseau/fichier, aucun `eval`/`exec`/`open`, pas de boucle infinie.
+  Le test est ensuite exécuté dans un worker séparé, sans secrets hérités.
+- Les pages web sont marquées « données non fiables » : leur contenu ne peut
+  jamais autoriser une action. Les URL loopback, privées et metadata sont
+  refusées pour l'apprentissage autonome.
+- La suppression de fichiers utilisateur passe par la corbeille.
 
-## Auto-amélioration — JIBI propose, tu disposes
+## Auto-amélioration — recherche → code → test → application
 
-Un cycle en 4 temps, tout en local, rien d'automatique :
+Le cycle peut être demandé avec « améliore-toi » ou lancé automatiquement :
 
-1. **DÉTECTER** — chaque échec d'outil est noté dans
-   `donnees/journal/erreurs.jsonl` (sans jamais faire planter JIBI).
-2. **ANALYSER** — JIBI peut relire le journal (outil `lister_erreurs`)
-   et son propre code (outil `lire_code_outil`).
-3. **PROPOSER** — JIBI écrit un outil nouveau **ou une correction**
-   (même nom qu'un outil existant) dans `donnees/propositions/` :
-   le code reste inactif, blacklisté (`subprocess`, `os.system`…).
-4. **DÉCIDER** — dans la console :
-   - `/bilan`          → outils actifs, propositions en attente, erreurs
-   - `/propositions`   → lire les propositions
-   - `/valider <nom>`  → activer (l'ancienne version part dans
-     `donnees/historique_outils/`)
-   - `/retirer <nom>`  → désactiver ; si la proposition masquait un outil
-     intégré, l'original est restauré tel quel
+1. **DÉTECTER** — les erreurs d'outils sont enregistrées dans
+   `donnees/journal/erreurs.jsonl` ;
+2. **RECHERCHER** — JIBI consulte des sources web publiques et les traite
+   comme des données non fiables ;
+3. **PROPOSER** — il crée un outil pur dans `donnees/propositions/`, ou
+   prépare une correction du noyau via `lire_code_noyau` ;
+4. **TESTER** — syntaxe, politique AST, worker isolé, cas d'essai et suite
+   complète du projet ;
+5. **APPLIQUER** — un outil sûr peut être activé automatiquement ; une
+   modification du noyau est sauvegardée puis appliquée sans confirmation
+   quand `JIBI_MODIFICATION_AUTO=1`, avec retour arrière automatique.
 
-Exemple de demande qui déclenche le cycle : « tes outils ont eu des
-erreurs ? analyse et propose une correction » — puis tu relis le fichier
-proposé et tu fais `/valider`.
+Pour une improvement qui exige un outil avec fichier, réseau, processus ou
+une API particulière, JIBI passe par le noyau ou attend une validation
+humaine : les tests ne valent jamais permission.
+
+Dans la console :
+- `/bilan` → outils, propositions et erreurs ;
+- `/propositions` → lire les artefacts en attente ;
+- `/valider <nom>` / `/retirer <nom>` → gestion manuelle ;
+- `/ameliorer [objectif]` → cycle immédiat ;
+- `/autonomie on|off HH:MM` → cycle quotidien.
 
 ## Commandes console
 
-`/aide /outils /bilan /workflows /sessions /notes /propositions
-/valider <nom> /retirer <nom> /micro /voix on|off /nouvelle /quitter`
+`/aide /outils /bilan /signaux /workflows /sessions /notes /propositions
+/tester <nom> /valider <nom> /retirer <nom> /verif /autonomie [on|off HH:MM]
+/ameliorer [objectif] /micro /voix on|off /nouvelle /quitter`
 
 ## Feuille de route (prochaines briques possibles)
 
@@ -130,26 +162,144 @@ proposé et tu fais `/valider`.
 3. La boule réagit à la voix (visualisation du niveau sonore en direct).
 
 ## Assistance Chrome & lumière amaran (ADD 23)
-- **Assistance Chrome** : double-clique `CHROME_JIBI.bat` (profil dédié « ChromeJIBI », port 9222 — depuis Chrome 136 le profil par défaut refuse le débogage). Puis : « quels onglets sont ouverts ? », « résume cette page », « passe sur l'onglet YouTube », « ferme l'onglet 2 » (confirmation demandée). Aucune donnée ne sort du PC, jamais de mot de passe, jamais de clic à ta place. JIBI lance Chrome tout seul si le port ne répond pas.
-- **Lumière amaran** : matériel une fois — ESP32 (~5 €) flashé avec wesbos/amaran-BLE-control, puis `JIBI_AMARAN_URL=http://ip-esp32:2708` dans le .env. Ensuite : « allume la key light à 60 % », « amaran en 5600 kelvin », « éteins la lumière vidéo ». (Godox TL60/DMX : à venir, même chez Jarvis.)
+- **Compte Google / ChromeJIBI** : double-clique `CHROME_JIBI.bat`. Il ouvre
+  Google dans un profil dédié (`%LOCALAPPDATA%\\JIBI2\\ChromeJIBI`,
+  port 9333). Connecte-toi **toi-même une fois** si tu le souhaites ; JIBI ne lit jamais le mot de
+  passe, les cookies ou le code 2FA. Ensuite, dis « ouvre mon compte Google » :
+  l'outil `ouvrir_compte_chrome` retrouve le profil et affiche l'onglet de session.
+  Depuis Chrome 136, le profil Chrome par défaut refuse le débogage distant ;
+  JIBI ne copie donc pas tes cookies vers un autre profil.
+- **Assistance Chrome** : « quels onglets sont ouverts ? », « cherche Claude IA
+  avec Chrome en arrière-plan » (vrai Chrome headless local, sans fenêtre ;
+  repli ChromeJIBI non affiché si Google bloque la session temporaire ;
+  `JIBI_CHROME_SEARCH_BACKGROUND=1` par défaut),
+  « ouvre Chrome et montre les résultats » (`chercher_dans_chrome`, visible),
+  « résume cette page », « passe sur l'onglet YouTube », « ferme l'onglet 2 »
+  (confirmation demandée). JIBI ne fait pas de clic ni de saisie à ta place et
+  ne contourne jamais un CAPTCHA.
+- **Lumière amaran** : matériel une fois — ESP32 (~5 €) flashé avec
+  wesbos/amaran-BLE-control, puis `JIBI_AMARAN_URL=http://ip-esp32:2708` dans
+  le .env. Ensuite : « allume la key light à 60 % », « amaran en 5600 kelvin »,
+  « éteins la lumière vidéo ».
+
+## Navigation Browser Use locale
+
+Browser Use est installé et fonctionne avec Chrome local + Ollama, sans
+`BROWSER_USE_API_KEY`, sans proxy cloud et sans télémétrie. Le profil Chrome
+utilisé par l'agent est temporaire : aucun cookie ni état de connexion n'est
+réutilisé par ce mode.
+
+- « ouvre cette page avec Browser Use et résume-la » (`lire_site_browser`) ;
+- « navigue sur ce site et trouve les informations sur… » (`naviguer_browser_use`) ;
+- « cherche une vidéo de… » (`chercher_video`) ;
+- « trouve ce morceau / cet artiste » (`chercher_music`) ;
+- « trouve le site officiel de… » (`chercher_site`).
+
+Le mode Browser Use reste en **lecture seule** : il ne saisit pas de
+formulaire, ne se connecte pas, ne paie rien et ne confirme aucun envoi ou
+suppression. `JIBI_BROWSER_HEADLESS=0` garde la fenêtre visible pour la navigation générale ;
+la recherche Google dédiée utilise toutefois un Chrome headless local sans
+fenêtre. `JIBI_BROWSER_VISION=0` évite les captures et laisse le DOM/local Ollama
+plus léger. Les recherches de vidéos, musiques et sites ne téléchargent pas les
+médias et ne contournent aucun DRM ou paywall.
+
+## Documents JIBI
+
+Les documents suivent une chaîne stable : JIBI remplit une spécification JSON,
+choisit un thème (`sobre`, `coloré`, `scolaire`, `moderne_sombre`,
+`professionnel` ou `enfant`), produit un HTML/CSS protégé puis le convertit en
+PDF avec Chromium headless local. Le HTML source est conservé à côté du PDF.
+Les formats Word et Excel passent respectivement par `python-docx` et
+`openpyxl` ; PowerPoint utilise `python-pptx`. Un générateur de secours
+standard reste disponible pour les PDF et Word.
+
+Demande un modèle avec :
+
+```text
+Donne-moi un exemple de document JIBI.
+```
+
+Les exemples complets sont dans `docs/exemples_documents.json`. Dans
+l'onglet **Documents**, le bouton **Importer document / image** copie les
+fichiers choisis dans `donnees/fichiers/imports` ; ils peuvent ensuite être
+analysés ou utilisés dans un nouveau document.
+
+Pour une demande comme « fais un petit cours sur les tableaux de signes sous
+forme de document Word », JIBI lance automatiquement une recherche Google
+headless locale, se replie sur une recherche HTTP silencieuse si nécessaire,
+lit quelques pages publiques, rédige un résumé puis crée le Word. Il n’est
+pas nécessaire de demander explicitement « cherche sur Google » ; aucune
+authentification, aucun formulaire et aucune publication ne sont effectués.
+
+Les tableaux sont créés de façon structurée ; par exemple, «crée un tableau Excel pour mon budget» ou «crée un tableau dans un document Word». Une section de type `tableau` utilise `colonnes` et `lignes`. JIBI peut aussi créer un simple dessin ou diagramme coloré avec des emojis et du texte (par exemple, «fais un dessin avec des emotifs»). Il s’agit d’une illustration locale dans un document, sans générateur d’images distant.
+
+Tu peux ensuite demander «mets le fichier dans Téléchargements» ou «copie-le dans Bureau». JIBI exporte un fichier depuis `donnees/fichiers` vers un dossier précis, avec confirmation, chemin exact et sans écrasement. Il ne copie pas automatiquement le même fichier dans tous les dossiers du PC.
 
 ## Panneau web, souris & jeux (ADD 24 — adapté de Jarvis)
-- **Panneau web local** : lancé automatiquement par run.py → http://127.0.0.1:8756 (127.0.0.1 UNIQUEMENT, rien ne sort du PC). Page HTML discutée au clavier, état du modèle, raccourcis. « ouvre le panneau » marche aussi à la voix. Port : JIBI_PANNEAU_PORT dans le .env.
+- **Barre latérale JIBI** : la fenêtre principale utilise une barre gauche rétractable et
+  redimensionnable. Elle contient Nouvelle session, Bibliothèque, Documents, Signaux,
+  les sessions récentes et le zoom. La Bibliothèque et les Documents s'affichent dans
+  la zone principale avec leurs onglets, sans popup ni nouvelle page.
+- **Conversation lisible** : Segoe UI 14, texte blanc cassé sur fond sombre, titres
+  blancs et gras, informations secondaires en gris clair. Les messages de JIBI et
+  de l'utilisateur ont des marges/fonds distincts ; les sorties système utilisent
+  Consolas dans un bloc légèrement plus clair. Les espaces insécables et les
+  décodages Windows invalides sont nettoyés avant affichage.
+- **Panneau web local** : lancé automatiquement par run.py → http://127.0.0.1:8756
+  (127.0.0.1 UNIQUEMENT). Chat écrit, ondes bleues/violettes pendant l'écoute,
+  lueur violette pendant la parole, jauge d'évolution, signaux du PC et boutons
+  de téléchargement des documents. Si tu demandes « peux-tu faire une recherche
+  avec Chrome ? », le sujet bref envoyé juste après est recherché avec Chrome
+  headless en arrière-plan, sans afficher Chrome. Dis explicitement « montre la
+  page » ou « ouvre Chrome » pour l'afficher. Le champ web utilise aussi une
+  zone multiligne auto-extensible et la touche Entrée pour envoyer. Dans la
+  fenêtre de bureau, la capsule du bas ne contient que des icônes : parole,
+  arrêt, dictée, trombone et envoi ; chaque icône possède une infobulle.
+  Le bouton Documents ouvre la liste des fichiers dans la fenêtre principale ;
+  il n'ouvre plus un autre onglet. L'icône de parole est un interrupteur simple :
+  active quand elle est violette, elle autorise la voix ; décochée, JIBI reste
+  muet. « Nouvelle session » nettoie le contexte et l'historique affiché.
+  Dans **Bibliothèque → Sessions**, sélectionne une session puis utilise
+  **Supprimer la session** ; la même option est disponible sous les sessions
+  récentes. Une confirmation est toujours demandée avant la suppression
+  définitive de ses messages. Le clic droit sur une session ouvre aussi ce menu.
+  Port : `JIBI_PANNEAU_PORT` dans le `.env`.
 - **Souris** (Windows, ctypes natif) : « déplace la souris à 90, 95 » (pourcentages d'écran), « fais défiler vers le bas » ; le CLIC est confirmé par toi à chaque fois. Combine avec voir_ecran pour viser.
 - **Jeux 100 % locaux** : « lance un dé », « pile ou face », « on joue à pierre feuille ciseaux, je joue pierre », « commence le nombre mystère »… c'est 50, plus grand ? 🎲
 
-## Version & mise à jour (ADD 26)
-- Le fichier **VERSION** donne ta version (« es-tu à jour ? » → outil verifier_mise_a_jour).
-- **Auto-amélioration des outils** : JIBI propose (proposer_nouvel_outil) → teste en bac à sable (tester_proposition, sécurité + SHA-256) → **TOI valides** → activé. Retour arrière : « retire l'outil X ». Tout est tracé dans le CHANGELOG.
-- **Mise à jour de JIBI lui-même : jamais automatique** (il ne remplace pas son noyau tout seul). Pour vérifier à distance : héberge un fichier texte avec la dernière version et mets l'URL dans JIBI_VERSION_URL (.env). Procédure : nouveau zip → remplacer le dossier en gardant donnees/ et modeles/voix/.
+## Version & mises à jour
+- Le fichier **VERSION** donne ta version (« es-tu à jour ? » → `verifier_mise_a_jour`).
+- JIBI peut améliorer son code source en autonomie, mais ne remplace jamais
+  automatiquement son installation complète (zip, dépendances ou modèle) :
+  cela reste une opération de mise à jour de paquet, distincte d'une
+  modification transactionnelle du code.
+- `verifier_mises_a_jour_pc` vérifie winget sans installer ;
+  `installer_mise_a_jour` demande une confirmation explicite.
+- L'auto-amélioration et chaque décision sont tracées dans
+  `donnees/journal/audit.jsonl` avec une chaîne de hachage.
 
-## Autonomie graduée (ADD 27) — LA règle demandée
-- **Seul, sans demander** : créer/tester/**activer** ses outils (proposer → tester → activer_proposition), ajouter des fonctionnalités, changer son design (personnaliser_design : couleurs de l'orbe et du panneau — `donnees/design.json`, survit aux mises à jour). « reset le design » = retour à l'origine.
-- **Le noyau (jibi2/, outils intégrés, interface, run.py, docteur.py, tests) → TOUJOURS une permission** : la boîte « Puis-je le faire ? » s'affiche avec la raison. Si accepté : sauvegarde auto + tests relancés + **retour arrière automatique si les tests cassent**. « restaure le fichier X » pour revenir en arrière.
-- **Jamais touchable** : `.env` (secrets), `donnees/` (tes données), `modeles/` (modèles), tout chemin hors du dossier JIBI.
+## Autonomie du code et des outils
+- **Seul, sans demander** : rechercher, analyser, créer/tester/activer un
+  outil pur, corriger un outil personnel et personnaliser le design.
+- **Noyau** : l'auto-amélioration peut proposer une modification, mais
+  `JIBI_AUTONOMIE_NOYAU=0` garde une confirmation humaine obligatoire avant
+  d'écrire dans le noyau. `JIBI_MODIFICATION_AUTO=1` active le mode de
+  modification, les tests et le retour arrière, mais ne contourne pas cette
+  confirmation.
+- **Toujours protégé** : `.env` (secrets), `donnees/`, `modeles/`, les
+  navigateurs/cookies et tout chemin extérieur au projet.
+- Chaque modification du noyau est atomique, sauvegardée, testée et
+  automatiquement restaurée si elle casse ; `/restaurer_noyau` reste possible.
+- `/autonomie on 04:00` programme le cycle quotidien ; `/ameliorer` le lance
+  immédiatement. `JIBI_SIGNAL_ACTIF=1` ajoute une alerte PC quotidienne à
+  `JIBI_SIGNAL_HEURE`. La jauge du panneau montre les étapes et le pourcentage.
+- L'interface ne montre plus les noms internes de fonctions/outils : elle
+  affiche seulement des résolutions en langage naturel. La voix masculine
+  **Tom** est active par défaut.
+
 
 ## Voix au choix & parole fluide (ADD 28)
-- **Changer de voix** : dis « change ta voix » ou « mets une voix masculine » → JIBI télécharge et active tout seul. Voix : **siwis (femme, actuelle)**, **tom (homme)**, upmc (homme), gilles (homme, léger). Effet immédiat, sans redémarrage (outil changer_voix).
+- **Changer de voix** : dis « change ta voix » ou « mets une voix masculine » → JIBI télécharge et active tout seul. Voix : **tom (homme, actuelle)**, siwis (femme), upmc (homme), gilles (homme, léger). Effet immédiat, sans redémarrage (outil changer_voix).
 - **Parole au fil de l'eau** : JIBI parle **dès la première phrase complète** pendant que le modèle écrit la suite (avant : il attendait la réponse entière avant de synthétiser). Premier mot audible en ~2-3 s au lieu de 5-12 s.
 - Réglage fin : PIPER_MODELE dans le .env (vide = première voix du dossier).
 
@@ -165,8 +315,59 @@ proposé et tu fais `/valider`.
 - ⚠️ N'utilise pas l'extension Code Runner de VS Code pour lancer JIBI : son fichier temporaire n'exécute rien (juste un `echo.`).
 - Chronomètre/vitesse : `python docteur.py --vitesse`.
 
-## Apprendre sur le web (ADD 31)
+## Apprendre sur le web et appliquer au code
 Dis-lui par exemple :
-- « cherche sur le web comment calculer une distance entre deux mots, fabrique-toi l'outil, teste-le et active-le » → il cherche, écrit l'outil, le teste en bac à sable, l'active SEUL et te cite la source ;
-- « ajoute la fonctionnalité X à ton code » → il prépare la modification et, comme c'est le noyau, la boîte « Puis-je le faire ? » s'affiche ; si les tests cassent après, retour arrière automatique.
-Garde-fous : scan sécurité (refuse subprocess/suppression…), bac à sable 10 s, SHA-256, tout réversible (« retire l'outil X » / « restaure le fichier Y »).
+- « cherche sur le web comment calculer une distance entre deux mots,
+  fabrique-toi l'outil, teste-le et active-le » ;
+- « ajoute la fonctionnalité X à ton code » ;
+- « cherche des images de chiens et montre-moi leurs sources » ;
+- « analyse mes documents et signale-moi les signaux importants » ;
+- « crée un tableau Excel avec mon budget » ;
+- « où suis-je et trouve une pharmacie près de moi » ;
+- « va sur ce site et résume-le ».
+
+- « va sur ce site et résume-le » (`visiter_site`).
+
+La localisation est une estimation de ville via la connexion réseau, pas un
+GPS précis ; aucune adresse IP n'est conservée. `JIBI_GEOLOCATION=0` la
+désactive complètement.
+
+Pour les images, JIBI peut renvoyer les résultats, leurs sources et licences,
+télécharger une image dans l'espace de travail avec `telecharger_image_web`,
+puis l'observer avec `voir_image` si le modèle de vision local est installé.
+
+## Nouveautés (dernière mise à jour)
+
+### Transfert de fichiers sans confirmation (`CONFIRMER_DEPLACEMENT=0`)
+JIBI peut maintenant déplacer/copier des fichiers vers les dossiers personnels du PC
+(Téléchargements, Bureau, Documents, Images, etc.) **sans demander de confirmation**.
+- Toggle : `/basculer_deplacement` ou bouton [CONFIRMATION] dans la barre
+- Le flag `CONFIRMER_DEPLACEMENT=0` dans `.env` active le mode auto
+- `configurer_deplacement` : outil pour JIBI lui-même de basculer ce flag
+
+### Navigation autonome
+JIBI peut naviguer sur le web de manière autonome :
+- `naviguer_autonome` : recherche Google headless, lit des pages, résume
+- `chercher_google_headless` : recherche Chrome locale sans fenêtre visible
+- `naviguer_browser_use` : navigation interactive avec raisonnement local
+- Les outils web sont dans le NOYAU pour l'accès autonome
+
+### Traduction (`traduire`, `langues_disponibles`)
+16 langues supportées : français, anglais, espagnol, allemand, italien,
+portugais, chinois, japonais, coréen, arabe, russe, néerlandais, polonais,
+turc, vietnamien, thaï.
+- Utilise Ollama local, avec fallback par dictionnaire si Ollama indisponible
+- Commande : `traduire` ou `/traduire`
+
+### Importation de documents et images
+- `importer_fichier` : importe PDF, Word, Excel, images depuis le PC vers JIBI
+- `_dossier_pc_valide` accepte tous les dossiers personnels sous `C:\Users\username\`
+- `gestionnaire_fichiers` : liste et navigue tous les dossiers du PC
+- Images : `voir_image` avec modèle de vision local (moondream)
+
+### Jeu adaptatif étendu
+111 outils dans 18 catégories. NOYAU = 24 outils essentiels toujours visibles.
+DOMAINES = patterns contextuels qui ajoutent des outils selon le contexte.
+- `/configurer_deplacement` : commande slash pour le toggle de confirmation
+- `/gestionnaire_fichiers` : gestion des dossiers du PC
+- `/traduire` : traduction directe

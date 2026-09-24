@@ -1,0 +1,42 @@
+{
+  "compte_rendu": {
+    "titre": "Compte rendu de réunion",
+    "sous_titre": "Décisions et prochaines étapes",
+    "theme": "professionnel",
+    "motif": "degrade",
+    "sections": [
+      {"type": "texte", "titre": "Résumé", "contenu": "La équipe a validé les objectifs de la semaine."},
+      {"type": "tableau", "titre": "Décisions", "colonnes": ["Sujet", "Décision", "Responsable"], "lignes": [["Livraison", "Avancer au vendredi", "Marie"]]},
+      {"type": "liste", "titre": "Prochaines étapes", "elements": ["Préparer le planning", "Relire le compte rendu"]}
+    ],
+    "pied_de_page": "JIBI — document local"
+  },
+  "fiche_scolaire": {
+    "titre": "Fiche pédagogique",
+    "sous_titre": "Séance et objectifs",
+    "theme": "scolaire",
+    "motif": "cercles",
+    "sections": [
+      {"type": "texte", "titre": "Objectif", "contenu": "Comprendre les notions essentielles et savoir les appliquer."},
+      {"type": "liste", "titre": "Activités", "elements": ["Rappel", "Exercice guidé", "Correction collective"]}
+    ]
+  },
+  "budget": {
+    "titre": "Budget mensuel",
+    "theme": "coloré",
+    "motif": "points",
+    "sections": [
+      {"type": "tableau", "colonnes": ["Poste", "Montant"], "lignes": [["Loyer", "850"], ["Courses", "320"], ["Transport", "75"]]}
+    ]
+  },
+  "moderne": {
+    "titre": "Note de projet",
+    "sous_titre": "Version JIBI",
+    "theme": "moderne_sombre",
+    "motif": "rayures",
+    "sections": [
+      {"type": "texte", "titre": "Idea", "contenu": "Une page claire, structurée et facile à partager."},
+      {"type": "texte", "titre": "Prochaine étape", "contenu": "Collecter les retours puis améliorer le contenu."}
+    ]
+  }
+}

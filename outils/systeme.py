@@ -21,6 +21,38 @@ VK_VOLUME_BAISSER = 0xAE
 VK_SILENCE = 0xAD
 
 
+def _normaliser_sortie(texte: str) -> str:
+    """Uniformise les espaces des sorties Windows avant leur affichage."""
+    valeur = str(texte or "")
+    valeur = valeur.replace("\u00a0", " ").replace("\u202f", " ")
+    # Une sortie déjà endommagée ne doit pas laisser le glyphe de
+    # remplacement au milieu d'un nombre : on le rend comme une espace.
+    import re
+    valeur = re.sub(r"(?<=\d)\ufffd(?=\d)", " ", valeur)
+    return valeur.replace("\ufffd", "").replace("\x00", "")
+
+
+def _decoder_sortie(brut: bytes | str | None) -> str:
+    """Décode une sortie console avec des remplacements sûrs.
+
+    Windows mélange parfois UTF-8, CP1252 et CP850 selon la commande. On
+    privilégie l'UTF-8 strict, puis les pages de codes locales usuelles.
+    """
+    if brut is None:
+        return ""
+    if isinstance(brut, str):
+        return _normaliser_sortie(brut)
+    donnees = bytes(brut)
+    for encodage in ("utf-8", "cp437", "cp850", "cp1252"):
+        try:
+            texte = donnees.decode(encodage)
+        except (UnicodeDecodeError, LookupError):
+            continue
+        if "\ufffd" not in texte:
+            return _normaliser_sortie(texte)
+    return _normaliser_sortie(donnees.decode("utf-8", errors="replace"))
+
+
 @outil("heure_actuelle", "Donne l'heure et la date actuelles du PC.", {},
        categorie="systeme", exemple='{"outil": "heure_actuelle", "parametres": {}}')
 def heure_actuelle() -> str:
@@ -81,10 +113,13 @@ def batterie() -> str:
 def processus(limite: int = 12) -> str:
     try:
         if sys.platform == "win32":
-            sortie = subprocess.run(["tasklist"], capture_output=True, text=True, timeout=15).stdout
+            fait = subprocess.run(["tasklist"], capture_output=True, timeout=15)
+            sortie = _decoder_sortie(fait.stdout)
             lignes = [li for li in sortie.splitlines()[3:] if li.strip()]
         else:
-            sortie = subprocess.run(["ps", "aux", "--sort=-%cpu"], capture_output=True, text=True, timeout=15).stdout
+            fait = subprocess.run(["ps", "aux", "--sort=-%cpu"], capture_output=True,
+                                  timeout=15)
+            sortie = _decoder_sortie(fait.stdout)
             lignes = sortie.splitlines()[1:]
         return f"{len(lignes)} processus. Principaux :\n" + "\n".join(lignes[:max(1, limite)])
     except Exception as e:
@@ -127,16 +162,81 @@ def couper_son() -> str:
     return _touche_volume(VK_SILENCE, 1)
 
 
+# --- Contrôle de la luminosité ---
+def _get_brightness() -> int:
+    """Lit la luminosité actuelle du moniteur."""
+    try:
+        import subprocess
+        result = subprocess.run(
+            ["powershell", "(Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).CurrentBrightness"],
+            capture_output=True, text=True, timeout=5
+        )
+        return int(result.stdout.strip())
+    except Exception:
+        return -1
+
+
+@outil("monter_luminosite", "Augmente la luminosité de l'écran (pas de 10 %, max 100).",
+       {"pas": {"type": "int", "obligatoire": False, "description": "augmentation en pourcentage (défaut 10)"}},
+       categorie="systeme", exemple='{"outil": "monter_luminosite", "parametres": {}}')
+def monter_luminosite(pas: int = 10) -> str:
+    """Augmente la luminosité de l'écran."""
+    try:
+        current = _get_brightness()
+        if current < 0:
+            return "Impossible de lire la luminosité actuelle."
+        nouvelle = min(100, current + pas)
+        subprocess.run(
+            ["powershell", f"(Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).SetBrightness(2, {nouvelle})"],
+            capture_output=True, timeout=5
+        )
+        return f"Luminosité augmentée : {current}% → {nouvelle}%"
+    except Exception as e:
+        return f"Impossible de changer la luminosité : {str(e)[:80]}"
+
+
+@outil("baisser_luminosite", "Baisse la luminosité de l'écran (pas de 10 %, min 0).",
+       {"pas": {"type": "int", "obligatoire": False, "description": "diminution en pourcentage (défaut 10)"}},
+       categorie="systeme", exemple='{"outil": "baisser_luminosite", "parametres": {}}')
+def baisser_luminosite(pas: int = 10) -> str:
+    """Baisse la luminosité de l'écran."""
+    try:
+        current = _get_brightness()
+        if current < 0:
+            return "Impossible de lire la luminosité actuelle."
+        nouvelle = max(0, current - pas)
+        subprocess.run(
+            ["powershell", f"(Get-CimInstance -Namespace root/WMI -ClassName WmiMonitorBrightness).SetBrightness(2, {nouvelle})"],
+            capture_output=True, timeout=5
+        )
+        return f"Luminosité baissée : {current}% → {nouvelle}%"
+    except Exception as e:
+        return f"Impossible de changer la luminosité : {str(e)[:80]}"
+
+
+@outil("luminosite_actuelle", "Donne la luminosité actuelle de l'écran.", {},
+       categorie="systeme", exemple='{"outil": "luminosite_actuelle", "parametres": {}}')
+def luminosite_actuelle() -> str:
+    """Retourne la luminosité actuelle."""
+    try:
+        current = _get_brightness()
+        if current < 0:
+            return "Impossible de lire la luminosité."
+        return f"Luminosité actuelle : {current}%"
+    except Exception:
+        return "Impossible de lire la luminosité."
+
+
 @outil("executer_commande", "Exécute une commande système (Windows) et renvoie son résultat. Action RISQUÉE.",
        {"commande": {"type": "str", "obligatoire": True, "description": "la commande à exécuter"},
         "timeout_s": {"type": "int", "obligatoire": False, "description": "durée max en secondes (défaut 30)"}},
        categorie="systeme", risque="eleve", exemple='{"outil": "executer_commande", "parametres": {"commande": "ipconfig"}}')
 def executer_commande(commande: str, timeout_s: int = 30) -> str:
     try:
-        fait = subprocess.run(commande, shell=True, capture_output=True, text=True,
+        fait = subprocess.run(commande, shell=True, capture_output=True,
                               timeout=max(5, min(int(timeout_s), 120)))
-        sortie = (fait.stdout or "").strip()
-        erreurs = (fait.stderr or "").strip()
+        sortie = _decoder_sortie(fait.stdout).strip()
+        erreurs = _decoder_sortie(fait.stderr).strip()
         texte = sortie or erreurs or f"(commande terminée, code {fait.returncode})"
         if len(texte) > 3000:
             texte = texte[:3000] + "… (tronqué)"
@@ -175,11 +275,10 @@ def verifier_mise_a_jour() -> str:
     locale = _version_locale()
     url = config.valeur("JIBI_VERSION_URL", "").strip()
     if not url:
-        return (f"Tu es en version {locale}. Les mises à jour de JIBI lui-même ne sont "
-                "PAS automatiques — par sécurité, il ne remplace jamais son propre noyau "
-                "tout seul : quand un nouveau zip sort, remplace le dossier en gardant "
-                "donnees/ et modeles/voix/. En revanche il s'améliore déjà tout seul sur "
-                "les OUTILS (proposer → tester → TOI valides → activé).")
+        return (f"Tu es en version {locale}. JIBI peut améliorer son code source "
+                "automatiquement avec tests et retour arrière, mais ne remplace jamais "
+                "automatiquement son installation complète (zip, dépendances ou modèle). "
+                "Pour une nouvelle version de paquet, garde donnees/ et modeles/voix/.")
     try:
         import urllib.request
         with urllib.request.urlopen(url, timeout=5) as reponse:

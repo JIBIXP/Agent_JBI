@@ -47,8 +47,42 @@ DEFAUTS = {
     "JIBI_HORAIRE_ACTIF": "1",            # 1 = workflows programmés actifs
     # --- Vision (CPU) ------------------------------------------------------
     "JIBI_VISION_MODEL": "moondream",     # léger (~1,4 Go), pensé pour le CPU
+    # --- Autonomie d'amélioration ------------------------------------------
+    # 1 = active le mode de modification ; une confirmation noyau reste
+    # obligatoire tant que JIBI_AUTONOMIE_NOYAU n'est pas explicitement mis à 1.
+    # La protection des secrets/données, les tests et le retour arrière restent actifs.
+    "JIBI_MODIFICATION_AUTO": "0",
+    # 0 = le noyau reste modifiable seulement après une confirmation explicite.
+    "JIBI_AUTONOMIE_NOYAU": "0",
+    # Cycle autonome facultatif, une fois par jour à l'heure indiquée.
+    "JIBI_AUTONOMIE_ACTIVE": "0",
+    "JIBI_AUTONOMIE_HEURE": "04:00",
+    # Délai minimal entre deux activations d'outils pendant un cycle automatique.
+    "JIBI_AUTONOMIE_DELAI": "21600",      # secondes (6 h)
+    # Mode continu : JIBI vérifie périodiquement s'il y a une nouvelle tâche
+    # "continuer" pendant que run.py est ouvert. Laissez à "0" pour le mode
+    # quotidien uniquement, ou mettez "1" pour activer la boucle en arrière-plan.
+    "JIBI_AUTONOMIE_CONTINU": "0",
+    # Intervalle en secondes entre deux vérifications en mode continu.
+    "JIBI_AUTONOMIE_INTERVALLE": "1800",   # 30 minutes
+    "JIBI_AUTONOMIE_LOCAL": "1",           # code/sources envoyés au modèle local
+    "JIBI_SIGNAL_ACTIF": "0",               # alertes PC quotidiennes
+    "JIBI_SIGNAL_HEURE": "08:00",
+    "JIBI_GEOLOCATION": "1",             # estimation réseau à la demande
+    # --- Browser Use local (Chrome + Ollama, jamais le cloud) ---------------
+    "JIBI_BROWSER_USE": "0",              # 1 = navigation locale activée
+    "JIBI_BROWSER_MODEL": "",              # vide = JIBI_LLM_MODEL
+    "JIBI_BROWSER_CHROME": "",             # vide = détection Chrome/Edge locale
+    "JIBI_BROWSER_HEADLESS": "0",          # 0 = fenêtre visible
+    "JIBI_BROWSER_VISION": "0",            # 1 = captures vers Ollama local
+    "JIBI_BROWSER_MAX_STEPS": "12",
+    "JIBI_BROWSER_TIMEOUT": "120",
+    "JIBI_BROWSER_WAIT": "1.5",
+    "JIBI_BROWSER_DOMAINS": "",             # vide = domaine demandé uniquement
+    "JIBI_CHROME_SEARCH_BACKGROUND": "1",  # recherche Google sans focus ni fenêtre
     # --- Sécurité -----------------------------------------------------------
     "CONFIRMER_RISQUES": "1",             # demander confirmation (o/n) si risque élevé
+    "CONFIRMER_DEPLACEMENT": "1",             # confirmation pour les deplacements de fichiers
 }
 
 _cache: dict[str, str] | None = None
@@ -94,3 +128,74 @@ def preparer_dossiers() -> None:
     for dossier in (DOSSIER_DONNEES, DOSSIER_FICHIERS, DOSSIER_CORBEILLE,
                     DOSSIER_PROPOSITIONS, DOSSIER_JOURNAL, DOSSIER_VOIX):
         dossier.mkdir(parents=True, exist_ok=True)
+
+
+def basculer_noyau() -> str:
+    """Bascule JIBI_AUTONOMIE_NOYAU entre 0 (verrouillé) et 1 (déverrouillé).
+    Retourne la nouvelle valeur sous forme de chaîne ('0' ou '1')."""
+    valeur_actuelle = valeur_bool("JIBI_AUTONOMIE_NOYAU")
+    nouvelle_valeur = "0" if valeur_actuelle else "1"
+    env_path = FICHIER_ENV
+    if env_path.exists():
+        contenu = env_path.read_text(encoding="utf-8", errors="replace")
+        lignes = contenu.splitlines()
+        trouve = False
+        nouvelles_lignes: list[str] = []
+        for ligne in lignes:
+            if ligne.strip().startswith("JIBI_AUTONOMIE_NOYAU"):
+                nouvelles_lignes.append(
+                    f"JIBI_AUTONOMIE_NOYAU={nouvelle_valeur}")
+                trouve = True
+            else:
+                nouvelles_lignes.append(ligne)
+        if not trouve:
+            nouvelles_lignes.append(
+                f"JIBI_AUTONOMIE_NOYAU={nouvelle_valeur}")
+        env_path.write_text("\n".join(nouvelles_lignes) + "\n",
+                             encoding="utf-8")
+    else:
+        env_path.write_text(f"JIBI_AUTONOMIE_NOYAU={nouvelle_valeur}\n",
+                             encoding="utf-8")
+    global _cache
+    _cache = None
+    return nouvelle_valeur
+
+
+def statut_noyau() -> str:
+    """Retourne une phrase lisible du verrouillage du noyau."""
+    if valeur_bool("JIBI_AUTONOMIE_NOYAU"):
+        return ("[NOYAU DÉVERROUILLÉ] Les modifications du code sont "
+                "autorisées quand tu les demandes explicitement.")
+    return ("[NOYAU VERROUILLÉ] Toute modification du code demande "
+            "une confirmation explicite.")
+
+
+def basculer_deplacement() -> str:
+    """Bascule CONFIRMER_DEPLACEMENT entre 0 (auto) et 1 (confirmation)."""
+    valeur_actuelle = valeur_bool("CONFIRMER_DEPLACEMENT")
+    nouvelle_valeur = "0" if valeur_actuelle else "1"
+    env_path = FICHIER_ENV
+    if env_path.exists():
+        contenu = env_path.read_text(encoding="utf-8", errors="replace")
+        lignes = contenu.splitlines()
+        trouve = False
+        nouvelles = []
+        for ligne in lignes:
+            if ligne.strip().startswith("CONFIRMER_DEPLACEMENT"):
+                nouvelles.append(f"CONFIRMER_DEPLACEMENT={nouvelle_valeur}")
+                trouve = True
+            else:
+                nouvelles.append(ligne)
+        if not trouve:
+            nouvelles.append(f"CONFIRMER_DEPLACEMENT={nouvelle_valeur}")
+        env_path.write_text("\n".join(nouvelles) + "\n", encoding="utf-8")
+    global _cache
+    _cache = None
+    return nouvelle_valeur
+
+
+def statut_deplacement() -> str:
+    """Retourne le statut de la confirmation deplacement."""
+    if valeur_bool("CONFIRMER_DEPLACEMENT"):
+        return "[CONFIRMATION REQUISE] Deplacement avec confirmation"
+    return "[AUTOMATIQUE] Deplacement sans confirmation"

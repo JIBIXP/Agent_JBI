@@ -63,12 +63,48 @@ def _cycle() -> None:
             _dernier_jour[nom] = jour
         resultat = workflows.executer(nom)
         premiere = resultat.splitlines()[1] if resultat.count("\n") >= 1 else resultat
-        _annoncer(f"⏰ Workflow programmé « {nom} » ({horaire}) :\n{premiere}")
+        _annoncer(f"Routine programmée — {nom} ({horaire}) :\n{premiere}")
         try:
             from jibi2.evolution import noter_changelog
             noter_changelog(f"workflow programmé « {nom} » exécuté automatiquement ({horaire})")
         except Exception:
             pass
+
+    # Cycle d'apprentissage autonome : une seule fois par jour, à l'heure
+    # configurée. Il passe par le même assistant et les mêmes outils que
+    # l'utilisateur, donc les sauvegardes/tests du noyau restent actifs.
+    try:
+        from jibi2 import autonomie
+        if autonomie.programme_echeance():
+            with _verrou:
+                if _dernier_jour.get("__autonomie__") == jour:
+                    return
+                _dernier_jour["__autonomie__"] = jour
+            from outils import service
+            assistant = service("assistant")
+            resultat = autonomie.lancer_si_programme(assistant)
+            if resultat:
+                _annoncer(f"Cycle autonome d'amélioration :\n{resultat}")
+    except KeyError:
+        # L'interface a démarré sans assistant (tests ou mode plan seul).
+        pass
+    except Exception as e:  # le cycle ne doit jamais tuer le planificateur
+        print(f"(autonomie : {e})")
+
+    # Signaux PC : un contrôle quotidien optionnel, sans installer quoi que ce soit.
+    try:
+        from outils import signaux
+        if (config.valeur_bool("JIBI_SIGNAL_ACTIF")
+                and time.strftime("%H:%M") == config.valeur("JIBI_SIGNAL_HEURE", "08:00")):
+            with _verrou:
+                if _dernier_jour.get("__signaux__") == jour:
+                    return
+                _dernier_jour["__signaux__"] = jour
+            resultat = signaux.surveiller()
+            if "aucun seuil" not in resultat.lower():
+                _annoncer(f"Signaux du PC :\n{resultat}")
+    except Exception as e:
+        print(f"(signaux : {e})")
 
 
 def _boucle(stop: threading.Event) -> None:

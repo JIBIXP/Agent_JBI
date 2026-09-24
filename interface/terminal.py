@@ -13,7 +13,7 @@ BANNIERE = r"""
 
 
 def confirmer_console(nom_outil: str, detail: str) -> bool:
-    print(f"\n⚠️  Action risquée demandée : {nom_outil}\n    {detail}")
+    print(f"\nAction sensible demandée\n    {detail}")
     try:
         return input("    Confirmer ? (o/N) ").strip().lower() in ("o", "oui", "y", "yes")
     except (EOFError, KeyboardInterrupt):
@@ -23,19 +23,23 @@ def confirmer_console(nom_outil: str, detail: str) -> bool:
 def _etat_modele(client, ok: bool) -> str:
     """Texte de statut à afficher à côté du nom du modèle (banni des ternaires imbriqués)."""
     if not ok:
-        return "  ❌ Ollama éteint"
+        return "  Ollama éteint"
     if client.modele_present():
-        return "  ✅"
-    return "  ❌ (ollama pull " + client.modele + ")"
+        return "  prêt"
+    return "  absent (ollama pull " + client.modele + ")"
 
 
 def _afficher_entete(client, ok: bool, memoire, voix_on: bool, ecoute) -> None:
     print(BANNIERE)
     print(f"   Modèle   : {client.modele}{_etat_modele(client, ok)}")
     print(f"   Mémoire  : {memoire.chemin}")
-    print(f"   Voix     : {'on' if voix_on else 'off'}  (/voix on)   Micro : {'✅' if ecoute.micro_disponible() else '—'}")
-    print("   Commandes : /aide /outils /bilan /workflows /sessions /notes /propositions "
-          "/tester <nom> /valider <nom> /retirer <nom> /verif /micro /voix on|off /nouvelle /quitter")
+    print(f"   Voix     : {'on' if voix_on else 'off'}  (/voix on)   Micro : {'disponible' if ecoute.micro_disponible() else 'indisponible'}")
+    print("   Commandes : /aide /outils /bilan /signaux /workflows /sessions /notes /propositions "
+          "/autonomie [on|off HH:MM] /ameliorer [objectif] /tester <nom> /valider <nom> "
+          "/retirer <nom> /verif /micro /voix on|off /nouvelle /quitter "
+           "/verrouiller_noyau /déverrouiller_noyau /basculer_noyau "
+           "/basculer_deplacement /gestionnaire_fichiers "
+            "/configurer_deplacement")
 
 
 class _Signal:
@@ -54,10 +58,11 @@ def _traiter_slash(commande: str, argument: str, texte: str, *, assistant, memoi
     if commande == "/aide":
         print("Parle simplement à JIBI. Commandes : /outils (liste), /bilan (santé des "
               "outils), /workflows (routines), /sessions, /notes, /propositions, "
-              "/tester <nom> (bac à sable), /valider <nom> (activer), /retirer <nom> "
-              "(désactiver/restaurer), /verif (tests internes), /micro (parler), "
+              "/autonomie [on|off HH:MM] (apprentissage planifié), /ameliorer [objectif] "
+              "(cycle immédiat), /signaux (santé du PC), /tester <nom> (bac à sable), /valider <nom> (activer), "
+              "/retirer <nom> (désactiver/restaurer), /verif (tests internes), /micro (parler), "
               "/voix on|off, /nouvelle, /quitter.")
-        return _Signal.POURSUIVRE, voix_on, texte
+        return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/outils":
         from outils import OUTILS
@@ -66,28 +71,82 @@ def _traiter_slash(commande: str, argument: str, texte: str, *, assistant, memoi
             par_categorie.setdefault(o.categorie, []).append(f"{o.nom} [{o.risque}]")
         for cat, noms in sorted(par_categorie.items()):
             print(f"  {cat} : " + ", ".join(noms))
-        return _Signal.POURSUIVRE, voix_on, texte
+        return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/sessions":
         for sid, titre, n in memoire.lister_sessions():
             print(f"  #{sid} — {titre} ({n} message{'s' if n > 1 else ''})")
-        return _Signal.POURSUIVRE, voix_on, texte
+        return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/notes":
         for n, t, h in memoire.lister_notes(15):
             print(f"  n°{n} — {t}  ({h})")
-        return _Signal.POURSUIVRE, voix_on, texte
+        return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/propositions":
         print(evolution.lister_propositions())
-        return _Signal.POURSUIVRE, voix_on, texte
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/bilan":
+        print(evolution.bilan())
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/signaux":
+        from outils import signaux
+        print(signaux.tableau_signaux())
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/workflows":
+        from outils import workflows
+        print(workflows.lister())
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/tester":
+        from jibi2 import labo
+        argument = argument.strip().removesuffix(".py")
+        if not argument:
+            print("   Usage : /tester <nom>")
+        else:
+            print(labo.tester_proposition(argument)["resume"])
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/retirer":
+        print(evolution.retirer(argument))
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/verif":
+        print(evolution.lancer_verification())
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/autonomie":
+        from jibi2 import autonomie
+        parties = argument.strip().split()
+        if parties and parties[0].lower() in ("on", "off"):
+            actif = parties[0].lower() == "on"
+            heure = parties[1] if len(parties) > 1 else ""
+            try:
+                print(autonomie.configurer(actif, heure))
+            except ValueError as e:
+                print(f"   Autonomie : {e}")
+        else:
+            print(autonomie.statut())
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/ameliorer":
+        from jibi2 import autonomie
+        print("   JIBI démarre un cycle d'amélioration...")
+        try:
+            print(autonomie.executer_cycle(assistant, argument.strip(), force=True))
+        except Exception as e:
+            print(f"   Cycle impossible : {e}")
+        return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/valider":
         print(evolution.valider(argument))
-        return _Signal.POURSUIVRE, voix_on, texte
+        return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/micro":
-        print("   🎤 J'écoute… (parle, puis silence)")
+        print("   Micro actif — parle, puis observe le silence.")
         entendu = ecoute.ecouter_phrase()
         if entendu:
             print(f"   tu as dit : {entendu}")
@@ -98,6 +157,84 @@ def _traiter_slash(commande: str, argument: str, texte: str, *, assistant, memoi
     if commande == "/voix":
         voix_on = argument.strip().lower() in ("on", "1", "oui")
         print(f"   Voix : {'on' if voix_on else 'off'}")
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande in ("/verrouiller_noyau", "/déverrouiller_noyau",
+                    "/basculer_noyau"):
+        from jibi2 import config as _config
+        if commande == "/basculer_noyau":
+            nouvelle = _config.basculer_noyau()
+            if nouvelle == "0":
+                print("   [VERROUILL] Noyau verrouillÉ — les modifications du code "
+                      "demandent une confirmation.")
+            else:
+                print("   🔓 Noyau DÉVERROUILLÉ — les modifications du code "
+                      "sont autorisées (avec confirmation à chaque fois).")
+        elif commande == "/verrouiller_noyau":
+            _config._cache = None
+            # Forcer l'écriture à 0
+            _env = _config.FICHIER_ENV
+            if _env.exists():
+                contenu = _env.read_text(encoding="utf-8", errors="replace")
+                lignes = contenu.splitlines()
+                nouvelles = []
+                trouve = False
+                for ligne in lignes:
+                    if ligne.strip().startswith("JIBI_AUTONOMIE_NOYAU"):
+                        nouvelles.append("JIBI_AUTONOMIE_NOYAU=0")
+                        trouve = True
+                    else:
+                        nouvelles.append(ligne)
+                if not trouve:
+                    nouvelles.append("JIBI_AUTONOMIE_NOYAU=0")
+                _env.write_text("\n".join(nouvelles) + "\n",
+                                  encoding="utf-8")
+            _config._cache = None
+            print("   [VERROUILL] Noyau verrouillÉ — les modifications du code "
+                  "demandent une confirmation.")
+        else:  # /déverrouiller_noyau
+            _env = _config.FICHIER_ENV
+            if _env.exists():
+                contenu = _env.read_text(encoding="utf-8", errors="replace")
+                lignes = contenu.splitlines()
+                nouvelles = []
+                trouve = False
+                for ligne in lignes:
+                    if ligne.strip().startswith("JIBI_AUTONOMIE_NOYAU"):
+                        nouvelles.append("JIBI_AUTONOMIE_NOYAU=1")
+                        trouve = True
+                    else:
+                        nouvelles.append(ligne)
+                if not trouve:
+                    nouvelles.append("JIBI_AUTONOMIE_NOYAU=1")
+                _env.write_text("\n".join(nouvelles) + "\n",
+                                  encoding="utf-8")
+            _config._cache = None
+            print("   🔓 Noyau DÉVERROUILLÉ — les modifications du code "
+                  "sont autorisées (avec confirmation à chaque fois).")
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/basculer_deplacement":
+        import config as _config
+        ancien = _config.valeur_bool("CONFIRMER_DEPLACEMENT")
+        nouvelle = _config.basculer_deplacement()
+        self._maj_deplacement_bouton()
+        if nouvelle == "0":
+            print("   [AUTO] Deplacement AUTOMATIQUE — plus de confirmation demandee.")
+        else:
+            print("   [CONFIRMATION] Deplacement avec confirmation.")
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/gestionnaire_fichiers":
+        from outils.fichiers import gestionnaire_fichiers
+        arg = argument.strip().removesuffix(".py")
+        print(gestionnaire_fichiers(arg or "lister"))
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/configurer_deplacement":
+        from outils.fichiers import configurer_deplacement
+        actif = argument.strip().lower() in ("true", "1", "oui", "on", "auto", "sans")
+        print(configurer_deplacement(actif))
         return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/nouvelle":
@@ -144,8 +281,7 @@ def _repondre_et_afficher(assistant, texte: str, voix_on: bool, flux_on: bool, p
         print(reponse["reponse"], end="")
     print()
     for a in reponse.get("actions", []):
-        croix = "✅" if a.get("ok") else "❌"
-        print(f"   {croix} outil {a['outil']} : {a['texte'][:200]}")
+        print("   Action terminée." if a.get("ok") else "   Action impossible.")
     _lire_a_voix_haute(reponse, recu, lecteur, voix_on, parole)
 
 

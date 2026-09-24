@@ -15,8 +15,13 @@ def _ecrire_env(cle: str, valeur: str) -> None:
     """Met à jour UNE ligne du .env sans toucher au reste (données sacrées)."""
     from jibi2 import config
     chemin = config.RACINE / ".env"
-    lignes = (chemin.read_text(encoding="utf-8").splitlines()
-              if chemin.exists() else [])
+    if not chemin.exists():
+        lignes: list[str] = []
+        separation = "\n"
+    else:
+        brut = chemin.read_bytes()
+        separation = "\r\n" if b"\r\n" in brut else "\n"
+        lignes = brut.decode("utf-8", errors="replace").splitlines()
     nouveau = f"{cle}={valeur}"
     remplace = False
     for i, ligne in enumerate(lignes):
@@ -26,7 +31,7 @@ def _ecrire_env(cle: str, valeur: str) -> None:
             break
     if not remplace:
         lignes.append(nouveau)
-    chemin.write_text("\n".join(lignes) + "\n", encoding="utf-8")
+    chemin.write_bytes((separation.join(lignes) + separation).encode("utf-8"))
 
 
 @outil("changer_voix",

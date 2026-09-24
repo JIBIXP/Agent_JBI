@@ -9,5 +9,13 @@ numpy
 pyttsx3
 SpeechRecognition
 pillow
+# Browser Use local (Chrome + Ollama, sans service cloud)
+browser-use>=0.13.10,<0.14
+# Documents : rendu Chromium local + styles Word/Excel (des solutions de secours
+# standard restent disponibles si une option n'est pas installée)
+playwright>=1.40
+python-docx>=1.1
+openpyxl>=3.1
+python-pptx>=0.6
 # Wake-word neuronal (optionnel, léger sur CPU) : pip install openwakeword
 # + un modèle dans modeles/wake/ — sinon détection par transcription.

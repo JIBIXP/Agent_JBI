@@ -116,6 +116,34 @@ class Memoire:
         self.session_id = int(session_id)
         return messages
 
+    def supprimer_session(self, session_id: int) -> bool:
+        """Supprime une session et tous ses messages dans la base locale.
+
+        L'opération est irréversible et doit être confirmée par l'interface.
+        Si la session supprimée était courante, l'identifiant courant est
+        remis à zéro : la prochaine écriture créera une nouvelle session.
+        """
+        try:
+            identifiant = int(session_id)
+        except (TypeError, ValueError):
+            return False
+        with self.verrou, self.bd:
+            existe = self.bd.execute(
+                "SELECT 1 FROM sessions WHERE id = ?", (identifiant,)
+            ).fetchone()
+            if not existe:
+                return False
+            self.bd.execute("DELETE FROM messages WHERE session_id = ?", (identifiant,))
+            self.bd.execute("DELETE FROM sessions WHERE id = ?", (identifiant,))
+            try:
+                session_courante = (self.session_id is not None
+                                    and int(self.session_id) == identifiant)
+            except (TypeError, ValueError):
+                session_courante = False
+            if session_courante:
+                self.session_id = None
+            return True
+
     # ----------------------------------------------------------------- notes
     def ajouter_note(self, texte: str) -> int:
         with self.verrou, self.bd:

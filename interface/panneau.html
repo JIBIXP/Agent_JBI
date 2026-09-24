@@ -3,138 +3,150 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JIBI — Panneau</title>
+<title>JIBI — tableau de bord</title>
 <style>
-  :root { --fond:#0d0b14; --carte:#171322; --bord:#2a2340; --violet:#a78bfa;
-          --texte:#eae6f7; --gris:#8d84a8; }
+  :root {
+    --fond:#080b14; --fond2:#0e1222; --carte:#111827; --carte2:#1b2340;
+    --champ:#202b45; --champ-bord:#3a496b; --bord:#29345c;
+    --violet:#b39cff; --bleu:#54b9ff; --texte:#f2f2f2; --pur:#ffffff;
+    --gris:#a0a0a0; --vert:#63e6b5; --orange:#ffbe72; --rouge:#ff7f9e;
+  }
   * { box-sizing:border-box; margin:0; }
-  body { background:var(--fond); color:var(--texte); font:15px/1.5 "Segoe UI",system-ui,sans-serif;
-         display:flex; flex-direction:column; height:100vh; }
-  header { display:flex; align-items:center; gap:12px; padding:14px 18px;
-           border-bottom:1px solid var(--bord); }
-  .orbe { width:16px; height:16px; border-radius:50%;
-          background:radial-gradient(circle at 35% 30%, #d8ccff, #7c5cff 60%, #3d2a80);
-          box-shadow:0 0 12px #7c5cff88; }
-  .orbe.reflechit { animation:pulse 1s infinite alternate; }
-  @keyframes pulse { from { box-shadow:0 0 6px #7c5cff55; } to { box-shadow:0 0 18px #a78bfa; } }
-  h1 { font-size:18px; font-weight:600; letter-spacing:.5px; }
-  #etat { margin-left:auto; color:var(--gris); font-size:12.5px; text-align:right; }
-  #etat b { color:var(--violet); font-weight:600; }
-  main { flex:1; overflow-y:auto; padding:18px; display:flex; flex-direction:column; gap:10px; }
-  .bulle { max-width:78%; padding:10px 14px; border-radius:14px; white-space:pre-wrap; }
-  .jibi { background:var(--carte); border:1px solid var(--bord); border-bottom-left-radius:4px; align-self:flex-start; }
-  .moi { background:#3d2a80; border-bottom-right-radius:4px; align-self:flex-end; }
+  body { min-height:100vh; background:radial-gradient(circle at 50% -20%,#20275b 0,var(--fond) 48%);
+         color:var(--texte); font:15px/1.5 "Segoe UI",system-ui,sans-serif; overflow:hidden;
+         -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+  .lumiere-bas { position:fixed; z-index:20; left:0; right:0; bottom:0; height:105px;
+                 pointer-events:none; opacity:.12; transition:opacity .35s,background .35s;
+                 background:linear-gradient(0deg,rgba(130,91,255,.72),transparent 78%); filter:blur(9px); }
+  body.parle .lumiere-bas { opacity:.34; background:linear-gradient(0deg,rgba(0,0,0,.78),rgba(30,15,65,.18) 58%,transparent 90%); }
+  body.ecoute .lumiere-bas { opacity:.55; background:linear-gradient(0deg,rgba(40,164,255,.75),rgba(130,80,255,.22) 58%,transparent 90%); }
+  #app { height:100vh; display:grid; grid-template-rows:auto 1fr auto; }
+  header { display:flex; align-items:center; gap:13px; padding:15px 22px; border-bottom:1px solid var(--bord);
+           background:rgba(8,11,20,.78); backdrop-filter:blur(12px); z-index:3; }
+  .orbe { position:relative; width:20px; height:20px; border-radius:50%; flex:0 0 auto;
+          background:radial-gradient(circle at 32% 28%,#fff,#a78bff 35%,#4930a5 78%);
+          box-shadow:0 0 15px #8d6bff99; }
+  .orbe:before,.orbe:after { content:""; position:absolute; inset:-8px; border:1px solid #8b6cff88;
+          border-radius:50%; opacity:0; }
+  body.reflexion .orbe { animation:pulse 1s infinite alternate; }
+  body.ecoute .orbe { background:radial-gradient(circle at 32% 28%,#fff,#54b9ff 36%,#2449b7 80%); box-shadow:0 0 19px #39a8ff; }
+  body.ecoute .orbe:before { animation:onde 1.35s ease-out infinite; }
+  body.ecoute .orbe:after { animation:onde 1.35s .45s ease-out infinite; border-color:#55b9ff99; }
+  body.parle .orbe { animation:parle .75s ease-in-out infinite alternate; }
+  @keyframes pulse { to { transform:scale(1.25); box-shadow:0 0 25px #b18cff; } }
+  @keyframes onde { 0% { transform:scale(.55); opacity:.9; } 100% { transform:scale(2.5); opacity:0; } }
+  @keyframes parle { to { transform:scale(1.14); box-shadow:0 0 25px #54b9ff; } }
+  h1 { color:var(--pur); font-size:18px; letter-spacing:.7px; font-weight:700; }
+  .sous { color:var(--gris); font-size:12px; }
+  #etat { margin-left:auto; color:var(--gris); text-align:right; font-size:12px; }
+  #etat b { color:var(--vert); font-weight:600; }
+  main { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; padding:17px 20px 8px; }
+  .zone-chat { min-height:0; display:flex; flex-direction:column; gap:10px; }
+  #fil { min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:14px; padding:0 6px 4px 0; }
+  .bulle { max-width:82%; padding:13px 17px; border-radius:16px; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.5; }
+  .jibi { align-self:flex-start; color:var(--texte); background:var(--carte); border:1px solid var(--bord); border-bottom-left-radius:5px; }
+  .moi { align-self:flex-end; color:var(--texte); background:var(--carte2); border:1px solid var(--champ-bord); border-bottom-right-radius:5px; }
   .actions { align-self:flex-start; display:flex; flex-wrap:wrap; gap:6px; }
-  .puce { font-size:12px; color:var(--gris); border:1px solid var(--bord);
-          border-radius:20px; padding:2px 10px; }
-  .puce b { color:var(--violet); font-weight:600; }
-  nav { display:flex; gap:8px; padding:0 18px 8px; flex-wrap:wrap; }
-  nav button { background:var(--carte); color:var(--gris); border:1px solid var(--bord);
-               border-radius:20px; padding:5px 13px; cursor:pointer; font-size:13px; }
+  .puce { font-size:12px; color:var(--gris); border:1px solid var(--bord); border-radius:20px; padding:2px 10px; }
+  .puce b { color:var(--vert); }
+  aside { min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
+  .carte { background:rgba(20,26,44,.9); border:1px solid var(--bord); border-radius:15px; padding:13px; box-shadow:0 10px 30px #0003; }
+  .carte h2 { font-size:12px; color:var(--pur); text-transform:uppercase; letter-spacing:1.1px; margin-bottom:9px; font-weight:700; }
+  .progression { height:8px; background:#080c18; border-radius:8px; overflow:hidden; margin:8px 0; }
+  #barre { height:100%; width:0; background:linear-gradient(90deg,var(--bleu),var(--violet)); transition:width .35s; }
+  #progression-detail { color:var(--gris); font-size:12px; }
+  .document, .signal { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 0; border-top:1px solid #ffffff0c; }
+  .document:first-of-type,.signal:first-of-type { border-top:0; }
+  .document a { color:var(--bleu); text-decoration:none; font-size:13px; overflow-wrap:anywhere; }
+  .document a:hover { text-decoration:underline; }
+  #import-fichiers { display:none; }
+  #importer { margin-top:10px; border:1px solid var(--bord); border-radius:9px; padding:5px 9px; background:var(--carte2); color:var(--texte); cursor:pointer; }
+  .petit { color:var(--gris); font-size:11px; white-space:nowrap; }
+  .signaux { color:var(--texte); font-size:12px; line-height:1.65; font-family:Consolas,"Cascadia Mono",monospace;
+            background:#111827; border:1px solid var(--bord); border-radius:10px; padding:8px 10px; }
+  .signaux strong { color:var(--pur); font-weight:700; }
+  nav { display:flex; gap:7px; padding:0 20px 6px; flex-wrap:wrap; }
+  nav button { background:var(--carte); color:var(--gris); border:1px solid var(--bord); border-radius:20px; padding:5px 12px; cursor:pointer; font-size:12px; }
   nav button:hover { color:var(--texte); border-color:var(--violet); }
-  footer { display:flex; gap:10px; padding:12px 18px 16px; border-top:1px solid var(--bord); }
-  #saisie { flex:1; background:var(--carte); border:1px solid var(--bord); color:var(--texte);
-            border-radius:12px; padding:11px 14px; font:inherit; outline:none; }
-  #saisie:focus { border-color:var(--violet); }
-  #envoyer { background:var(--violet); color:#171225; border:none; border-radius:12px;
-             padding:11px 20px; font-weight:600; cursor:pointer; }
-  #envoyer:disabled { opacity:.5; cursor:default; }
+  footer { display:flex; align-items:flex-end; gap:9px; padding:10px 20px 17px; border-top:1px solid var(--bord); background:rgba(8,11,20,.8); }
+  .zone-saisie { flex:1; min-width:0; display:flex; align-items:flex-end; gap:8px; min-height:52px; max-height:150px;
+                  padding:8px 9px 8px 15px; background:var(--champ); border:1px solid var(--champ-bord); border-radius:15px;
+                  box-shadow:0 -5px 18px #0002; transition:border-color .18s,box-shadow .18s; }
+  .zone-saisie:focus-within { border-color:var(--violet); box-shadow:0 0 0 3px #b39cff22,0 -5px 18px #0003; }
+  #saisie { flex:1; min-width:0; min-height:34px; max-height:132px; resize:none; overflow-y:auto; background:transparent; border:0; color:var(--texte); padding:7px 0; font:inherit; line-height:1.5; outline:none; }
+  #saisie::placeholder { color:var(--gris); }
+  button.action { border:1px solid transparent; border-radius:12px; padding:10px 16px; font:inherit; font-weight:650; cursor:pointer; color:#151027; background:var(--violet); }
+  button.action:disabled { opacity:.45; cursor:default; }
+  #envoyer { flex:0 0 48px; width:48px; height:48px; padding:0; border:1px solid var(--champ-bord); border-radius:14px; background:#d9dced; color:#111827; font-size:27px; line-height:1; }
+  #envoyer:hover:not(:disabled) { background:var(--violet); color:#101322; border-color:var(--violet); }
+  #envoyer:disabled { background:#27314a; color:var(--gris); border-color:var(--champ-bord); }
+  @media (max-width:850px) { main { grid-template-columns:1fr; padding:12px; } aside { display:grid; grid-template-columns:1fr 1fr; max-height:220px; } nav,footer { padding-left:12px; padding-right:12px; } }
+  @media (max-width:560px) { aside { display:flex; max-height:180px; } .bulle { max-width:92%; } }
 </style>
 </head>
 <body>
-<header>
-  <div class="orbe" id="orbe"></div>
-  <h1>JIBI</h1>
-  <div id="etat">…</div>
-</header>
-<main id="fil"></main>
-<nav id="raccourcis"></nav>
-<footer>
-  <input id="saisie" placeholder="Demande quelque chose à JIBI… (Entrée pour envoyer)" autocomplete="off">
-  <button id="envoyer">Envoyer</button>
-</footer>
+<div class="lumiere-bas"></div>
+<div id="app">
+  <header>
+    <div class="orbe" id="orbe"></div>
+    <div><h1>JIBI</h1><div class="sous">interface locale · écoute · action · évolution</div></div>
+    <div id="etat">connexion…</div>
+  </header>
+  <main>
+    <section class="zone-chat">
+      <div id="fil"></div>
+      <nav id="raccourcis"></nav>
+    </section>
+    <aside>
+      <section class="carte">
+        <h2>Progression</h2>
+        <div class="progression"><div id="barre"></div></div>
+        <div id="progression-detail">Aucune tâche en cours</div>
+      </section>
+      <section class="carte">
+        <h2>Documents prêts</h2>
+        <div id="documents"><div class="petit">Aucun document</div></div>
+        <input id="import-fichiers" type="file" multiple accept=".pdf,.docx,.xlsx,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp,.bmp">
+        <button id="importer">Importer document / image</button>
+      </section>
+      <section class="carte">
+        <h2>Signaux du PC</h2>
+        <div id="signaux" class="signaux">Analyse en cours…</div>
+      </section>
+    </aside>
+  </main>
+  <footer>
+    <div class="zone-saisie" id="zone-saisie">
+      <textarea id="saisie" rows="1" placeholder="Demande quelque chose à JIBI… (Entrée pour envoyer, Maj+Entrée pour une ligne)" autocomplete="off"></textarea>
+      <button class="action" id="envoyer" aria-label="Envoyer le message" title="Envoyer">↑</button>
+    </div>
+  </footer>
+</div>
 <script>
 "use strict";
-const fil = document.getElementById("fil"), saisie = document.getElementById("saisie"),
-      bouton = document.getElementById("envoyer"), orbe = document.getElementById("orbe"),
-      etat = document.getElementById("etat");
-
-const RACCOURCIS = ["Quelle heure est-il ?", "Quelle batterie ?", "Ouvre Chrome",
-                    "Lance un dé", "Pile ou face", "Quels onglets sont ouverts ?",
-                    "Prends une note : penser à JIBI", "Liste mes rappels"];
-
-function bulle(texte, moi) {
-  const d = document.createElement("div");
-  d.className = "bulle " + (moi ? "moi" : "jibi");
-  d.textContent = texte;
-  fil.appendChild(d);
-  fil.scrollTop = fil.scrollHeight;
-  return d;
-}
-
-function puces(actions) {
-  if (!actions || !actions.length) return;
-  const cont = document.createElement("div");
-  cont.className = "actions";
-  for (const a of actions) {
-    const p = document.createElement("span");
-    p.className = "puce";
-    const b = document.createElement("b");
-    b.textContent = a.outil || "?";
-    p.appendChild(b);
-    p.appendChild(document.createTextNode(" " + (a.texte || "").slice(0, 90)));
-    cont.appendChild(p);
-  }
-  fil.appendChild(cont);
-  fil.scrollTop = fil.scrollHeight;
-}
-
-async function envoyer(texte) {
-  texte = (texte || saisie.value).trim();
-  if (!texte) return;
-  saisie.value = "";
-  bulle(texte, true);
-  bouton.disabled = true; saisie.disabled = true;
-  orbe.classList.add("reflechit");
-  const attente = bulle("…", false);
-  try {
-    const r = await fetch("/api/message", {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({texte})
-    });
-    const j = await r.json();
-    attente.textContent = j.reponse || "(réponse vide)";
-    puces(j.actions);
-  } catch (e) {
-    attente.textContent = "Serveur injoignable — JIBI tourne toujours ?";
-  }
-  orbe.classList.remove("reflechit");
-  bouton.disabled = false; saisie.disabled = false;
-  saisie.focus();
-  rafraichirEtat();
-}
-
-async function rafraichirEtat() {
-  try {
-    const j = await (await fetch("/api/etat")).json();
-    etat.innerHTML = "<b>" + (j.ollama ? "prêt" : "Ollama éteint") + "</b> · " +
-      j.modele + " · " + j.outils + " outils · " + j.heure;
-  } catch (e) { etat.textContent = "hors ligne"; }
-}
-
-bouton.addEventListener("click", () => envoyer());
-saisie.addEventListener("keydown", e => { if (e.key === "Enter") envoyer(); });
-const navraccourcis = document.getElementById("raccourcis");
-for (const r of RACCOURCIS) {
-  const b = document.createElement("button");
-  b.textContent = r;
-  b.addEventListener("click", () => envoyer(r));
-  navraccourcis.appendChild(b);
-}
-bulle("Salut ! Le panneau est prêt — écris-moi, tout reste sur ce PC.", false);
-rafraichirEtat();
-setInterval(rafraichirEtat, 10000);
-saisie.focus();
+const fil=document.getElementById("fil"), saisie=document.getElementById("saisie"),
+      zoneSaisie=document.getElementById("zone-saisie"), bouton=document.getElementById("envoyer"),
+      etat=document.getElementById("etat"), barre=document.getElementById("barre"),
+      progres=document.getElementById("progression-detail"), documents=document.getElementById("documents"),
+      signaux=document.getElementById("signaux"), importInput=document.getElementById("import-fichiers"),
+      importButton=document.getElementById("importer");
+const RACCOURCIS=["Quelle heure est-il ?","Quels sont tes signaux PC ?","Ouvre mon compte Google",
+                  "Analyse un fichier","Lance un dé","Prends une note : penser à JIBI","Améliore-toi"];
+function nettoyer(texte){return String(texte??"").replace(/\u00a0/g," ").replace(/\u202f/g," ").replace(/�/g," ");}
+function bulle(texte,moi){const d=document.createElement("div");d.className="bulle "+(moi?"moi":"jibi");d.textContent=nettoyer(texte);fil.appendChild(d);fil.scrollTop=fil.scrollHeight;return d;}
+function ajusterSaisie(){saisie.style.height="auto";const hauteur=Math.min(saisie.scrollHeight,132);saisie.style.height=Math.max(34,hauteur)+"px";saisie.style.overflowY=saisie.scrollHeight>132?"auto":"hidden";bouton.disabled=!saisie.value.trim();}
+function puces(actions){if(!actions||!actions.length)return;const c=document.createElement("div");c.className="actions";for(const a of actions){const p=document.createElement("span");p.className="puce";p.textContent=a.ok?"Action terminée":"Action impossible";c.appendChild(p);}fil.appendChild(c);fil.scrollTop=fil.scrollHeight;}
+async function envoyer(texte){texte=nettoyer(texte||saisie.value).trim();if(!texte)return;saisie.value="";ajusterSaisie();bulle(texte,true);bouton.disabled=true;saisie.disabled=true;document.body.classList.add("reflexion","parle");const attente=bulle("…",false);try{const r=await fetch("/api/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texte})});const j=await r.json();attente.textContent=nettoyer(j.reponse||"(réponse vide)");puces(j.actions);}catch(e){attente.textContent="Serveur injoignable — JIBI tourne toujours ?";}document.body.classList.remove("reflexion");setTimeout(()=>document.body.classList.remove("parle"),650);saisie.disabled=false;saisie.focus();ajusterSaisie();rafraichirDocuments();}
+async function rafraichirEtat(){try{const j=await(await fetch("/api/etat")).json();etat.textContent=(j.ollama?"● prêt":"● Ollama éteint")+" · "+j.modele+" · "+j.outils+" outils · "+j.heure;}catch(e){etat.textContent="hors ligne";}}
+async function rafraichirProgression(){try{const p=await(await fetch("/api/progression")).json();const n=Math.max(0,Math.min(100,Number(p.pourcent)||0));barre.style.width=n+"%";progres.textContent=(p.actif?"● ":"")+n+" % · "+(p.titre||"Aucune tâche")+(p.etape?" — "+p.etape:"");}catch(e){}}
+async function importerFichiers(){const fichiers=[...importInput.files];if(!fichiers.length)return;const corps=new FormData();for(const f of fichiers)corps.append("fichier",f,f.name);importButton.disabled=true;try{const r=await fetch("/api/import",{method:"POST",body:corps});const j=await r.json();bulle((j.messages||[]).join("\n")||j.message||"Import terminé",false);await rafraichirDocuments();}catch(e){bulle("Import impossible.",false);}finally{importButton.disabled=false;importInput.value="";}}
+async function rafraichirDocuments(){try{const j=await(await fetch("/api/documents")).json();const ds=j.documents||[];documents.replaceChildren();if(!ds.length){const d=document.createElement("div");d.className="petit";d.textContent="Aucun document";documents.appendChild(d);return;}for(const x of ds){const row=document.createElement("div");row.className="document";const a=document.createElement("a");a.href=x.url;a.download=x.nom;a.textContent="Télécharger "+x.nom;const s=document.createElement("span");s.className="petit";s.textContent=Math.max(1,Math.round((x.taille||0)/1024))+" Ko";row.append(a,s);documents.appendChild(row);}}catch(e){}}
+async function rafraichirSignaux(){try{const s=await(await fetch("/api/signaux")).json();signaux.replaceChildren();for(const [k,v] of [["Batterie",s.batterie],["Disque",s.disque],["Réseau",s.reseau],["Erreurs JIBI",s.erreurs_jibi],["Documents",s.documents]]){const line=document.createElement("div");const b=document.createElement("strong");b.textContent=k+" : ";line.append(b,document.createTextNode(nettoyer(v||"—")));signaux.appendChild(line);}}catch(e){signaux.textContent="Signaux indisponibles";}}
+bouton.addEventListener("click",()=>envoyer());importButton.addEventListener("click",()=>importInput.click());importInput.addEventListener("change",importerFichiers);saisie.addEventListener("input",ajusterSaisie);saisie.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();envoyer();}});
+for(const r of RACCOURCIS){const b=document.createElement("button");b.textContent=r;b.addEventListener("click",()=>envoyer(r));document.getElementById("raccourcis").appendChild(b);}
+bulle("Salut ! Je suis prêt. Écris, parle ou demande-moi une analyse.",false);
+rafraichirEtat();rafraichirDocuments();rafraichirProgression();rafraichirSignaux();
+setInterval(rafraichirEtat,10000);setInterval(rafraichirDocuments,5000);setInterval(rafraichirProgression,1000);setInterval(rafraichirSignaux,30000);ajusterSaisie();saisie.focus();
 </script>
 </body>
 </html>

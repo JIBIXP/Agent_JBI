@@ -17,6 +17,10 @@ import sys
 import urllib.request
 from pathlib import Path
 
+for _flux in (sys.stdout, sys.stderr):
+    if hasattr(_flux, "reconfigure"):
+        _flux.reconfigure(encoding="utf-8", errors="replace")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from jibi2 import config
 
@@ -144,7 +148,8 @@ def bilan() -> int:
     config.preparer_dossiers()
     if config.FICHIER_ENV.exists():
         ligne("ok", f".env lu — modèle {config.valeur('JIBI_LLM_MODEL')}, "
-                    f"TTS {config.valeur('TTS_ENGINE')}, STT {config.valeur('STT_ENGINE')}")
+                    f"TTS {config.valeur('TTS_ENGINE')}, STT {config.valeur('STT_ENGINE')}, "
+                    f"code autonome {'oui' if config.valeur_bool('JIBI_MODIFICATION_AUTO') else 'non'}")
     else:
         ligne("avert", "Pas de .env : les valeurs par défaut sont utilisées "
                        "(copie .env.exemple si tu veux les personnaliser).")

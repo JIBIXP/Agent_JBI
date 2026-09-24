@@ -7,8 +7,10 @@ ClientRouteur : choisit automatiquement local ou cloud selon la complexité
 """
 from __future__ import annotations
 
+import contextlib
 import json
 import re
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -370,10 +372,24 @@ class ClientRouteur:
         self.local = ClientLLM()
         self.cloud = ClientCloud()
         self.auto_actif = config.valeur_bool("JIBI_CLOUD_AUTO")
+        self._contexte_local = threading.local()
         self.dernier_moteur = "local"  # exposé pour affichage ("JIBI (cloud) › ...")
 
+    @contextlib.contextmanager
+    def contexte_local(self):
+        """Force le modèle local pour une opération sensible (autonomie)."""
+        previous = getattr(self._contexte_local, "active", False)
+        self._contexte_local.active = True
+        try:
+            yield self
+        finally:
+            self._contexte_local.active = previous
+
+    def _local_force(self) -> bool:
+        return bool(getattr(self._contexte_local, "active", False))
+
     def _choisir(self, texte_utilisateur: str) -> ClientLLM | ClientCloud:
-        if not self.auto_actif or not self.cloud.disponible():
+        if self._local_force() or not self.auto_actif or not self.cloud.disponible():
             self.dernier_moteur = "local"
             return self.local
         if _demande_complexe(texte_utilisateur):
@@ -395,7 +411,7 @@ class ClientRouteur:
         try:
             return moteur.discuter(messages, temperature)
         except ErreurLLM:
-            if moteur is self.local and self.cloud.disponible():
+            if moteur is self.local and not self._local_force() and self.cloud.disponible():
                 self.dernier_moteur = "cloud"
                 return self.cloud.discuter(messages, temperature)
             raise
@@ -425,7 +441,7 @@ class ClientRouteur:
                 return self._stream_sans_risque_cloud(messages, temperature, on_chunk)
             return moteur.discuter_stream(messages, temperature, on_chunk=on_chunk)
         except ErreurLLM:
-            if moteur is self.local and self.cloud.disponible():
+            if moteur is self.local and not self._local_force() and self.cloud.disponible():
                 self.dernier_moteur = "cloud"
                 return self._stream_sans_risque_cloud(messages, temperature, on_chunk)
             raise

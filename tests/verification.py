@@ -10,16 +10,24 @@ import sys
 import tempfile
 from pathlib import Path
 
+for _flux in (sys.stdout, sys.stderr):
+    if hasattr(_flux, "reconfigure"):
+        _flux.reconfigure(encoding="utf-8", errors="replace")
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import os
 
 os.environ["CONFIRMER_RISQUES"] = "1"
+os.environ["JIBI_MODIFICATION_AUTO"] = "1"  # autonomie explicitement accordée par l'utilisateur
+os.environ["JIBI_AUTONOMIE_NOYAU"] = "0"     # le noyau reste soumis à confirmation
+os.environ["JIBI_GEOLOCATION"] = "1"
 
 from jibi2 import config, evolution, llm, memoire
 
 config.preparer_dossiers()
-from jibi2.assistant import Assistant, _extraire_json
+from jibi2.assistant import (Assistant, _demande_cours, _demande_dessin,
+                             _demande_tableau, _extraire_json)
 from jibi2.securite import Garde
 from outils import OUTILS, executer
 
@@ -62,6 +70,29 @@ verif("chercher_fichier", r["ok"] and "essai" in r["texte"])
 r = executer("supprimer_fichier", {"nom": "essai.txt"}, Garde(lambda n, d: False))
 verif("supprimer_fichier → corbeille", r["ok"] and "corbeille" in r["texte"])
 
+# export contrôlé vers un dossier externe temporaire
+from outils import fichiers as _fichiers  # noqa: E402
+_source_export = config.DOSSIER_FICHIERS / "export_test.txt"
+_source_export.write_text("JIBI", encoding="utf-8")
+_destination_export = Path(tempfile.gettempdir()) / "jibi_export_verification"
+_destination_export.mkdir(exist_ok=True)
+_garde_export = Garde(lambda _n, _d: True)
+r = executer("copier_document", {"nom": _source_export.name,
+                                  "destination": str(_destination_export)}, _garde_export)
+verif("copier document vers un dossier choisi", r["ok"]
+      and (_destination_export / _source_export.name).is_file(), r["texte"])
+r = executer("copier_document", {"nom": _source_export.name,
+                                  "destination": str(_destination_export)}, _garde_export)
+verif("copie export sans écrasement", r["ok"]
+      and (_destination_export / "export_test (1).txt").is_file(), r["texte"])
+r = executer("copier_document", {"nom": _source_export.name,
+                                  "destination": str(config.DOSSIER_FICHIERS)}, _garde_export)
+verif("destination protégée refusée", not r["ok"], r["texte"])
+_source_export.unlink(missing_ok=True)
+for _nom in ("export_test.txt", "export_test (1).txt"):
+    (_destination_export / _nom).unlink(missing_ok=True)
+_destination_export.rmdir()
+
 # 4. Risque élevé : confirmation exigée puis refus
 garde_refus = Garde(lambda nom, detail: False)
 r = executer("executer_commande", {"commande": "echo test"}, garde_refus)
@@ -73,6 +104,12 @@ sid = bd.nouvelle_session("essai")
 bd.ajouter_message("utilisateur", "bonjour")
 bd.ajouter_message("jibi", "salut")
 verif("messages persistés", len(bd.messages_de(sid)) == 2)
+sid_supprime = bd.nouvelle_session("à supprimer")
+bd.ajouter_message("utilisateur", "conversation à effacer")
+verif("suppression session et messages", bd.supprimer_session(sid_supprime)
+      and not bd.messages_de(sid_supprime)
+      and not any(int(s) == sid_supprime for s, _t, _n in bd.lister_sessions(500)))
+verif("suppression session inconnue refusée", not bd.supprimer_session(999999999))
 n = bd.ajouter_note("acheter du pain")
 verif("note ajoutée", any("pain" in t for _, t, _ in bd.lister_notes()))
 verif("chercher_notes", bd.chercher_notes("pain"))
@@ -152,18 +189,14 @@ verif("v2 remplace v1", r["ok"] and "V2 : 3" in r["texte"], r["texte"])
 historique = list((config.DOSSIER_DONNEES / "historique_outils").glob("compteur_mots.*.py"))
 verif("ancienne version en historique", len(historique) >= 1, str(historique))
 
-# masquage d'un outil intégré + restauration par /retirer
-AVANT = OUTILS["calculer"].fonction
+# une correction d'un outil intégré doit passer par modifier_noyau, jamais
+# par un overlay persistant capable de prendre le contrôle du nom.
 PIEGE = ("from outils import outil\n"
          "@outil('calculer', 'Version de test.', "
          "{'expression': {'type': 'str', 'obligatoire': True}}, categorie='calcul')\n"
          "def calculer(expression):\n    return 'version de test'\n")
-evolution.proposer_outil("calculer", PIEGE)
-retour = evolution.valider("calculer")
-verif("proposition masque l'intégré",
-      OUTILS["calculer"].fonction is not AVANT and "masque" in retour, retour)
-retour = evolution.retirer("calculer")
-verif("retrait restaure l'intégré", OUTILS["calculer"].fonction is AVANT, retour)
+retour = evolution.proposer_outil("calculer", PIEGE)
+verif("overlay d'un outil intégré refusé", "refus" in retour.lower(), retour)
 retour = evolution.retirer("compteur_mots")
 verif("retrait d'un outil perso", "compteur_mots" not in OUTILS, retour)
 verif("bilan donne les stats", "outils actifs" in evolution.bilan(), evolution.bilan())
@@ -181,6 +214,12 @@ retour = workflows.creer("test_wf", "essai",
                                        "parametres": {"expression": "6*7"}},
                                       {"message": "bonjour"}]))
 verif("workflow créé", "créé" in retour, retour)
+_rwf = executer("creer_workflow", {
+    "nom": "test_wf_horaire", "description": "essai horaire",
+    "etapes": _json.dumps([{"outil": "heure_actuelle", "parametres": {}}]),
+    "horaire": "07:42"}, Garde(lambda n, d: False))
+verif("outil workflow transmet l'horaire", _rwf["ok"] and "créé" in _rwf["texte"], _rwf["texte"])
+workflows.supprimer("test_wf_horaire")
 retour = workflows.executer("test_wf")
 verif("workflow exécuté (outil ok, message passé)", "1 ok" in retour and "42" in retour
       and "passée" in retour, retour)
@@ -290,6 +329,18 @@ verif("évaluation de risque (faible)",
       labo.evaluer_risque(CODE_RISQUE_FAIBLE)[0] == "faible", str(labo.evaluer_risque(CODE_RISQUE_FAIBLE)))
 verif("évaluation de risque (élevé)",
       labo.evaluer_risque("import subprocess\nx = 1\n")[0] == "eleve")
+CODE_AUTONOME_SUR = ("from outils import outil\n"
+                    "@outil('autonome_sur', 'A.', {}, categorie='divers')\n"
+                    "def autonome_sur():\n    return 1\n")
+verif("autonomie : code pur accepté par la politique",
+      labo.analyser_code_autonome(CODE_AUTONOME_SUR, "autonome_sur")[0])
+verif("autonomie : import fichier/réseau refusé",
+      not labo.analyser_code_autonome(
+          "from pathlib import Path\n" + CODE_AUTONOME_SUR, "autonome_sur")[0])
+verif("autonomie : eval/exec refusés",
+      not labo.analyser_code_autonome(
+          "from outils import outil\n@outil('autonome_sur', 'A.', {})\n"
+          "def autonome_sur():\n    return eval('1')\n", "autonome_sur")[0])
 CODE_SYNTAX_CASSÉE = ("from outils import outil\n"
                       "@outil('outil_casse', 'Cassé.', {}, categorie='divers')\n"
                       "def outil_casse(:\n    return 1\n")
@@ -379,6 +430,17 @@ verif("assistant.reprendre restaure l'histoire",
       "reprise" in retour and len(asst_sess.histoire) == 2
       and asst_sess.histoire[0]["content"].startswith("donne"), retour)
 verif("reprendre une session inconnue", "introuvable" in asst_sess.reprendre(999))
+historique_avant = list(asst_sess.histoire)
+verif("suppression non courante conserve la conversation",
+      asst_sess.supprimer_session(sid_b) and bd_sess.session_id == sid_a
+      and asst_sess.histoire == historique_avant)
+etat_avant = (bd_sess.session_id, list(asst_sess.histoire))
+verif("suppression inconnue conserve l'état", not asst_sess.supprimer_session(999999998)
+      and (bd_sess.session_id, asst_sess.histoire) == etat_avant)
+supprimee = asst_sess.supprimer_session(sid_a)
+verif("assistant supprime la session courante",
+      supprimee and bd_sess.session_id is None and not asst_sess.histoire
+      and not bd_sess.messages_de(sid_a))
 bd_sess.fermer()
 
 # 18. Dictée en continu (segments simulés, mot final « envoie »)
@@ -421,6 +483,17 @@ archive = _zip.ZipFile(config.DOSSIER_FICHIERS / "test_demo.docx")
 verif("docx = zip valide avec document.xml",
       archive.testzip() is None and "word/document.xml" in archive.namelist())
 archive.close()
+demande_cours = _demande_cours("fais un petit cours sur les tableaux de signes sous forme de document word")
+verif("cours autonome avec titre détecté",
+      demande_cours is not None and demande_cours["sujet"] == "les tableaux de signes"
+      and demande_cours["format"] == "word")
+verif("refaire un cours détecté",
+      (_demande_cours("tu peux refaire le cours sur les tableaux de signes") or {}).get("sujet")
+      == "les tableaux de signes")
+verif("tableau autonome détecté",
+      (_demande_tableau("cree un tableau Excel pour mon budget") or {}).get("format") == "excel")
+verif("dessin emoji autonome détecté",
+      (_demande_dessin("fais un dessin avec des emotifs") or {}).get("format") == "word")
 # évasion de dossier toujours refusée via _chemin_espace
 try:
     documents.creer_pdf("../malplace.pdf", "x", "y")
@@ -551,13 +624,25 @@ try:
     verif("onglets listés (devtools filtré)",
           "2 onglet" in _liste and "Documentation" in _liste, _liste.splitlines()[0])
     verif("onglet ouvert via /json/new", "Nouvel onglet" in module_chrome.ouvrir_onglet("youtube.com"))
+    verif("compte Google ouvert dans ChromeJIBI",
+          "Compte ouvert" in module_chrome.ouvrir_compte_chrome("google"))
+    verif("recherche ouverte dans ChromeJIBI",
+          "Recherche ChromeJIBI" in module_chrome.chercher_dans_chrome("recettes de pasta"))
+    verif("site direct ouvert dans ChromeJIBI",
+          "Onglet ouvert" in module_chrome.visiter_site("https://exemple.fr", lire=False))
     verif("onglet activé par mot", "Documentation" in module_chrome.activer_onglet("documentation"))
     verif("onglet fermé par numéro", "fermé" in module_chrome.fermer_onglet("2"))
     _lu = module_chrome.lire_onglet_actif()
     verif("page active lue (texte extrait)",
           _lu.startswith("Onglet actif :") and "TL60" in _lu, _lu[:40])
     module_chrome._base = lambda: f"http://127.0.0.1:{_port_mort}"
-    verif("Chrome absent → message clair", "CHROME_JIBI.bat" in module_chrome.lister_onglets())
+    from outils import applications as _applications25
+    _chrome_trouver_orig = _applications25._trouver_chrome
+    _applications25._trouver_chrome = lambda: None
+    try:
+        verif("Chrome absent → message clair", "CHROME_JIBI.bat" in module_chrome.lister_onglets())
+    finally:
+        _applications25._trouver_chrome = _chrome_trouver_orig
 
     module_amaran._pont = lambda: f"http://127.0.0.1:{_port_pont}"
     verif("amaran allumer → /lights/all/on",
@@ -581,7 +666,13 @@ finally:
     _pont_http.shutdown()
     _pont_http.server_close()
 
-# 26. Panneau web local, jeux, souris (adapté de Jarvis/panneau + souris)
+# 26. Web :SSRF bloqué pour l'apprentissage autonome
+from outils.web import _valider_url_publique  # noqa: E402
+
+_verrou_web, _raison_web = _valider_url_publique("http://127.0.0.1/")
+verif("web : loopback refusé", _verrou_web is None and "privé" in _raison_web, _raison_web)
+
+# 27. Panneau web local, jeux, souris (adapté de Jarvis/panneau + souris)
 import json as _json26  # noqa: E402
 import urllib.error as _uerr26  # noqa: E402
 import urllib.request as _ureq26  # noqa: E402
@@ -626,6 +717,25 @@ try:
     verif("panneau : échange de message", _reponse["reponse"] == "écho:bonjour panneau")
     _etat = _json26.loads(_ureq26.urlopen(f"http://127.0.0.1:{_port_panneau}/api/etat").read())
     verif("panneau : état", "modele" in _etat and "outils" in _etat, str(_etat)[:60])
+    from jibi2 import progression as _progression26
+    _progression26.demarrer("Test interface", "Analyse")
+    _progression26.mettre(42, "Vérification")
+    _progression = _json26.loads(
+        _ureq26.urlopen(f"http://127.0.0.1:{_port_panneau}/api/progression").read())
+    verif("panneau : jauge de progression exposée",
+          _progression["pourcent"] == 42 and "Test interface" in _progression["titre"])
+    _doc_interface = config.DOSSIER_FICHIERS / "document_interface.txt"
+    _doc_interface.write_text("document téléchargeable", encoding="utf-8")
+    _documents = _json26.loads(
+        _ureq26.urlopen(f"http://127.0.0.1:{_port_panneau}/api/documents").read())
+    verif("panneau : documents listés", any(x["nom"] == _doc_interface.name
+                                             for x in _documents["documents"]))
+    _telecharge = _ureq26.urlopen(
+        f"http://127.0.0.1:{_port_panneau}/telecharger/{_doc_interface.name}").read()
+    verif("panneau : bouton de téléchargement servi",
+          _telecharge == "document téléchargeable".encode("utf-8"))
+    _doc_interface.unlink(missing_ok=True)
+    _progression26.terminer("test terminé")
     try:
         _ureq26.urlopen(f"http://127.0.0.1:{_port_panneau}/api/rien")
         verif("panneau : 404 sur route inconnue", False)
@@ -652,8 +762,10 @@ verif("jeu : mystère trop grand", "PLUS PETIT" in nombre_mystere("deviner", 60)
 verif("jeu : mystère gagné", "Bravo" in nombre_mystere("deviner", 50)
       and not _module_jeux._MYSTERE)
 
-verif("souris : réservée à Windows ici", "Windows" in deplacer_souris(50, 50)
-      and "Windows" in cliquer_souris())
+verif("souris : réponse adaptée à la plateforme",
+      (deplacer_souris(50, 50).startswith("Curseur")
+       and cliquer_souris().startswith("Clic")) if os.name == "nt"
+      else ("Windows" in deplacer_souris(50, 50) and "Windows" in cliquer_souris()))
 verif("souris : pourcentages bornés", _bornes(-5) == 0 and _bornes(150) == 100)
 
 # 27. Voie rapide : réponses instantanées sans passer par le modèle
@@ -689,18 +801,19 @@ verif("voie rapide : pas de faux positif",
       _voie_rapide("mets une alarme dans une heure", _garde27) is None
       and _voie_rapide("rappelle-moi dans 2 minutes", _garde27) is None)
 
-# 28. Version & mise à jour (honnête : pas d'auto-update du noyau)
+# 28. Version & mises à jour (code improved, installation complete guarded)
 from outils.systeme import _version_locale, verifier_mise_a_jour  # noqa: E402
 
 _ver = _version_locale()
 verif("fichier VERSION lisible", _ver != "inconnue" and "ADD" in _ver, _ver)
 _message = verifier_mise_a_jour()
 verif("mise à jour : position honnête annoncée",
-      _ver in _message and "PAS automatique" in _message)
+      _ver in _message and "améliorer son code source" in _message
+      and "installation complète" in _message)
 verif("mise à jour : procédure de sauvegarde rappelée",
       "donnees/" in _message and "modeles/voix" in _message)
 
-# 29. Autonomie graduée : design libre, outils auto-activés, noyau sur permission
+# 29. Autonomie du code : outils sûrs et noyau modifiables sans confirmation
 from interface.panneau import _page_html  # noqa: E402
 from outils.design import personnaliser_design, style_panneau  # noqa: E402
 
@@ -741,24 +854,28 @@ _echo = _exec29("outil_auto29", {"texte": "ça marche"}, _g29)
 verif("autonomie : l'outil auto-activé fonctionne", _echo["ok"] and "écho29" in _echo["texte"])
 _evo29.retirer("outil_auto29")
 
-# noyau : permission demandée (risque élevé → la garde bloque d'abord)
-_refus = _exec29("modifier_noyau", {"fichier": "jibi2/assistant.py", "contenu": "x = 1"}, _g29)
-verif("noyau : bloqué si l'utilisateur refuse", "refusé" in _refus["texte"])
-_g29.confirmer = lambda nom, detail: True          # l'utilisateur dit oui
-_piece = Path("tests/_piece_test29.py")
-_ok = _exec29("modifier_noyau", {"fichier": "tests/_piece_test29.py",
-                                 "contenu": "PIECE29 = 'ok'\n", "verifier": False}, _g29)
-verif("noyau : création acceptée avec permission", _ok["ok"] and _piece.exists())
-_casse = _exec29("modifier_noyau", {"fichier": "tests/_piece_test29.py",
-                                    "contenu": "def casse(:\n", "verifier": False}, _g29)
+# noyau : l'auto-amélioration peut proposer, mais l'écriture reste confirmée
+verif("noyau : confirmation humaine obligatoire",
+      _g29.autoriser("modifier_noyau", "eleve", "test") is False)
+_g29.confirmer = lambda nom, detail: True      # les tests simulent ton accord
+_lire_noyau = _exec29("lire_code_noyau", {"fichier": "VERSION", "lignes": 2}, _g29)
+verif("noyau : lecture d'un fichier autorisée", _lire_noyau["ok"] and "ADD" in _lire_noyau["texte"])
+# Le contenu invalide est refusé avant toute écriture.
+_casse = _exec29("modifier_noyau", {
+    "fichier": "tests/verification.py", "contenu": "def casse(:\n", "raison": "test syntaxe",
+    "verifier": False}, _g29)
 verif("noyau : syntaxe cassée refusée avant écriture",
-      not _casse["ok"] and _piece.read_text() == "PIECE29 = 'ok'\n")
-_verrou = _exec29("modifier_noyau", {"fichier": ".env", "contenu": "x", "verifier": False}, _g29)
+      not _casse["ok"] and "SYNTAXE" in _casse["texte"])
+_paire = _exec29("modifier_noyau", {
+    "fichier": "VERSION", "avant": "ADD 31", "raison": "test paire"}, _g29)
+verif("noyau : paire avant/après incomplète refusée",
+      not _paire["ok"] and "obligatoire" in _paire["texte"])
+_verrou = _exec29("modifier_noyau", {"fichier": ".env", "contenu": "x",
+                                      "raison": "test protection", "verifier": False}, _g29)
 _travers = _exec29("modifier_noyau", {"fichier": "../.env", "contenu": "x",
-                                      "verifier": False}, _g29)
+                                      "raison": "test protection", "verifier": False}, _g29)
 verif("noyau : .env et traversée interdits",
       "jamais modifiable" in _verrou["texte"] and "refusé" in _travers["texte"])
-_piece.unlink(missing_ok=True)
 
 # 30. Voix au choix (dont masculine) + parole au fil de l'eau
 from audio import parole as _parole30  # noqa: E402
@@ -872,8 +989,67 @@ verif("web→amélioration : comportement enseigné au modèle",
       and "proposer_nouvel_outil" in _SYSTEME33)
 verif("web→amélioration : toute la chaîne d'outils enregistrée",
       {"rechercher_web", "lire_page_web", "proposer_nouvel_outil",
-       "tester_proposition", "activer_proposition",
-       "modifier_noyau"} <= set(_module_outils33.lister_noms()))
+       "tester_proposition", "activer_proposition", "lire_code_noyau",
+       "modifier_noyau", "ameliorer_autonomement", "ouvrir_compte_chrome",
+        "chercher_dans_chrome", "visiter_site", "creer_excel", "analyser_excel",
+        "analyser_documents", "localisation_approchee", "rechercher_pres",
+        "rechercher_images_web", "images_page_web", "telecharger_image_web",
+        "lire_site_browser", "naviguer_browser_use", "chercher_video",
+        "chercher_music", "chercher_site", "statut_browser_use"}
+      <= set(_module_outils33.lister_noms()))
+
+from jibi2 import autonomie as _autonomie33  # noqa: E402
+
+verif("autonomie : horaire HH:MM validé", _autonomie33._normaliser_heure("4:05") == "04:05")
+try:
+    _autonomie33._normaliser_heure("25:99")
+    _horaire_invalide = False
+except ValueError:
+    _horaire_invalide = True
+verif("autonomie : horaire invalide refusé", _horaire_invalide)
+
+from outils import analyse as _analyse34  # noqa: E402
+from outils import bureautique as _bureau34  # noqa: E402
+from outils import localisation as _local34  # noqa: E402
+from outils import signaux as _signaux34  # noqa: E402
+from outils import navigateur as _navigateur34  # noqa: E402
+from outils import web as _web34  # noqa: E402
+from jibi2 import audit as _audit34  # noqa: E402
+
+_fichier_analyse = config.DOSSIER_FICHIERS / "_analyse_test.txt"
+_fichier_analyse.write_text("une ligne de test\nune autre ligne de test\n", encoding="utf-8")
+_analyse = _analyse34.analyser_fichier(_fichier_analyse.name)
+verif("analyse : statistiques de fichier", "SHA-256" in _analyse and "Mots : 9" in _analyse, _analyse[:120])
+_fichier_analyse.unlink(missing_ok=True)
+_excel_test = config.DOSSIER_FICHIERS / "_budget_test.xlsx"
+_creation_excel = _bureau34.creer_excel(_excel_test.name,
+                                       '[["Poste","Montant"],["Loyer",850]]')
+_analyse_excel = _bureau34.analyser_excel(_excel_test.name)
+verif("bureautique : Excel créé et analysé",
+      "Excel créé" in _creation_excel and "Dimensions" in _analyse_excel,
+      _analyse_excel[:100])
+_excel_test.unlink(missing_ok=True)
+_ancien_get = _web34._get
+_web34._get = lambda *args, **kwargs: '{"city":"Rennes","region":"Bretagne","country_name":"France","timezone":"Europe/Paris"}'
+try:
+    _position_test = _local34.localisation_approchee()
+finally:
+    _web34._get = _ancien_get
+verif("géolocalisation : estimation de ville", "Rennes" in _position_test, _position_test)
+_ancien_get_images = _web34._get
+_web34._get = lambda *args, **kwargs: '{"results":[{"title":"Coucher de soleil","url":"https://images.exemple/photo.jpg","foreign_landing_url":"https://exemple/photo","license":"CC0","creator":"Test"}]}'
+try:
+    _images_test = _web34.rechercher_images_web("coucher de soleil")
+finally:
+    _web34._get = _ancien_get_images
+verif("images : recherche et provenance", "photo.jpg" in _images_test and "CC0" in _images_test)
+_statut_browser = _navigateur34.statut_browser_use()
+verif("browser use : mode local sans API key",
+      "sans API key" in _statut_browser and "Chrome local" in _statut_browser)
+_signaux = _signaux34.collecter(force=True)
+verif("signaux : état du PC collecté", "batterie" in _signaux and "documents" in _signaux)
+_audit34.journaliser("test", "cible", resultat="ok")
+verif("audit : chaîne d’événements vérifiable", _audit34.verifier_chaine()[0])
 
 print("────────────────────────────────────────────────")
 print(f"{stats['ok']}/{stats['ok'] + stats['ko']} OK")

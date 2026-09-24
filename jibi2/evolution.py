@@ -1,19 +1,18 @@
-"""Auto-amélioration de JIBI 2 — JIBI propose, TU disposes.
+"""Auto-amélioration de JIBI 2 — proposition, test et activation.
 
 Le cycle complet (tout est local, tout est visible) :
 
   1. DÉTECTER : chaque échec d'outil est noté dans donnees/journal/erreurs.jsonl
-  2. ANALYSER : JIBI peut relire le journal (outil lister_erreurs) et son
-     propre code (outil lire_code_outil)
-  3. PROPOSER : JIBI écrit un outil nouveau ou corrigé dans
-     donnees/propositions/ — le code n'est JAMAIS exécuté avant validation
-  4. DÉCIDER  : dans la console : /propositions · /valider <nom> (active) ·
-     /retirer <nom> (désactive et restaure l'ancien) · /bilan (résumé)
+  2. ANALYSER : JIBI relit le journal et le code concerné
+  3. PROPOSER : un outil nouveau ou corrigé est écrit dans
+     donnees/propositions/, puis testé dans un processus séparé
+  4. APPLIQUER : l'activation d'un outil peut être automatique ; toute
+     modification du noyau passe par outils/noyau.py, qui sauvegarde,
+     vérifie la syntaxe, lance les tests et restaure en cas d'échec.
 
-Limites volontaires : JIBI ne modifie jamais son noyau (jibi2/,
-interface/, run.py) ni le .env — il ne peut proposer que des OUTILS, et
-jamais activés sans ton accord. Pas de modification automatique, pas
-d'autonomie sur le code du cerveau.
+Le noyau est modifiable quand `JIBI_MODIFICATION_AUTO=1` a été choisi par
+l'utilisateur. `.env`, `donnees/`, `modeles/` et les chemins extérieurs
+demeurent toujours hors de portée.
 """
 from __future__ import annotations
 
@@ -26,8 +25,9 @@ import subprocess
 import sys
 import time
 
-from . import config
+from . import audit, config
 from .labo import (
+    analyser_code_autonome,
     evaluer_risque,
     sha256_fichier,
     tester_proposition,
@@ -110,6 +110,10 @@ def proposer_outil(nom: str, code: str) -> str:
     if "@outil(" not in code or "from outils import" not in code:
         return ("La proposition doit définir un outil avec le décorateur @outil(...) "
                 "et commencer par « from outils import outil ».")
+    import outils
+    if nom in outils.OUTILS and not (outils.DOSSIER_PERSO / f"{nom}.py").exists():
+        return (f"Proposition refusée : « {nom} » est un outil intégré. "
+                "Modifie son code avec modifier_noyau, ou choisis un nouveau nom.")
     risque, raisons = evaluer_risque(code)
     if risque == "eleve":
         return f"Proposition refusée : {' ; '.join(raisons)}."
@@ -120,6 +124,8 @@ def proposer_outil(nom: str, code: str) -> str:
         {"sha256": sha256_fichier(chemin), "risque": risque, "raisons": raisons,
          "quand": time.strftime("%Y-%m-%d %H:%M"), "test": "pas_encore"}, ensure_ascii=False),
         encoding="utf-8")
+    audit.journaliser("outil_propose", nom, details="proposition inactive",
+                      resultat="propose", empreinte=sha256_fichier(chemin))
     deja = "(correction d'un outil existant)" if (nom in _outils_actifs()) else "(nouvel outil)"
     return (f"Proposition enregistrée {deja}, risque {risque}"
             + (f" ({'; '.join(raisons)})" if raisons else "")
@@ -152,6 +158,8 @@ def lister_propositions() -> str:
 # ── 4. DÉCIDER ───────────────────────────────────────────────────────────────
 def valider(nom: str) -> str:
     nom = (nom or "").strip().removesuffix(".py")
+    if not _MOTIF_NOM.match(nom):
+        return f"Nom de proposition invalide : {nom!r}."
     source = PROPOSITIONS / f"{nom}.py"
     if not source.exists():
         return f"Aucune proposition nommée « {nom} »."
@@ -160,11 +168,20 @@ def valider(nom: str) -> str:
         if fragment in code:
             source.unlink()
             return f"Proposition « {nom} » rejetée et supprimée : elle contenait « {fragment} »."
+    import outils
+    if nom in outils.OUTILS and not (outils.DOSSIER_PERSO / f"{nom}.py").exists():
+        return (f"Activation refusée : « {nom} » est un outil intégré. "
+                "Utilise modifier_noyau pour le corriger.")
+    auto_ok, auto_raisons = analyser_code_autonome(code, nom)
+    if not auto_ok:
+        return "Activation refusée (autonomie sûre) : " + " ; ".join(auto_raisons) + "."
     ok_integrite, message_integrite = verifier_integrite(nom)
     if not ok_integrite:
         return f"⚠️ {nom} : {message_integrite}"
     verdict = tester_proposition(nom)
     if not verdict["ok"]:
+        audit.journaliser("outil_refuse", nom, details=verdict.get("resume", "")[:300],
+                          resultat="refuse")
         return (f"{verdict['resume']} La proposition reste dans donnees/propositions/ "
                 "pour correction — ou supprime-la.")
     import outils
@@ -183,6 +200,8 @@ def valider(nom: str) -> str:
     shutil.move(str(source), str(destination))
     (PROPOSITIONS / f"{nom}.json").unlink(missing_ok=True)
     outils.charger_perso()
+    audit.journaliser("outil_active", nom, details=message[:300],
+                      resultat="active", empreinte=sha256_fichier(destination))
     noter_changelog(f"outil « {nom} » {'remplacé' if 'REMPLACÉ' in message else 'activé'} "
                     f"(risque {verdict.get('risque', '?')}, testé en bac à sable ✅)")
     return message + f" Test bac à sable : {verdict['resume']}"
@@ -191,6 +210,8 @@ def valider(nom: str) -> str:
 def retirer(nom: str) -> str:
     """Désactive un outil perso ; restaure l'outil intégré s'il était masqué."""
     nom = (nom or "").strip().removesuffix(".py")
+    if not _MOTIF_NOM.match(nom):
+        return f"Nom d'outil invalide : {nom!r}."
     import outils
     destination = outils.DOSSIER_PERSO / f"{nom}.py"
     if not destination.exists():
@@ -199,9 +220,13 @@ def retirer(nom: str) -> str:
     shutil.move(str(destination), HISTORIQUE / f"{nom}.{int(time.time())}.py")
     if nom in _SAUVEGARDES:
         outils.OUTILS[nom] = _SAUVEGARDES.pop(nom)
+        audit.journaliser("outil_retire", nom, details="version intégrée restaurée",
+                          resultat="retire")
         noter_changelog(f"outil « {nom} » retiré, version intégrée restaurée")
         return f"Outil « {nom} » retiré : la version intégrée est restaurée."
     outils.OUTILS.pop(nom, None)
+    audit.journaliser("outil_retire", nom, details="outil personnel désactivé",
+                      resultat="retire")
     noter_changelog(f"outil perso « {nom} » retiré (fichier gardé dans historique)")
     return f"Outil « {nom} » retiré (fichier gardé dans donnees/historique_outils)."
 
@@ -271,7 +296,8 @@ def enregistrer_outil() -> None:
 
     @outil("proposer_nouvel_outil",
            "Propose un NOUVEL outil (ou une CORRECTION d'un outil existant, en gardant le même nom). "
-           "Le code est stocké inactif dans donnees/propositions/ ; seul l'utilisateur peut l'activer.",
+           "Le code est stocké dans donnees/propositions/ puis peut être testé et activé "
+           "automatiquement par JIBI ; l'utilisateur peut aussi l'examiner avec /propositions.",
            {"nom": {"type": "str", "obligatoire": True,
                     "description": "nom court : minuscules et _ seulement (le même nom qu'un outil "
                                    "existant = proposition de correction)"},
@@ -279,8 +305,11 @@ def enregistrer_outil() -> None:
                      "description": "code Python complet : from outils import outil + fonction décorée @outil(...)"}},
            categorie="amelioration", risque="moyen",
            exemple='{"outil": "proposer_nouvel_outil", "parametres": {"nom": "convertisseur_euro", "code": "from outils import outil\\n\\n@outil(\'convertisseur_euro\', \'Convertit des euros en francs.\', {\'euros\': {\'type\': \'float\', \'obligatoire\': True}}, categorie=\'calcul\')\\ndef convertir(euros):\\n    return f\'{euros} EUR = {euros * 6.55957:.2f} FRF\'"}}')
-    def proposer_nouvel_outil(nom: str, code: str) -> str:
-        return proposer_outil(nom, code)
+    def proposer_nouvel_outil(nom: str, code: str) -> dict:
+        texte = proposer_outil(nom, code)
+        refuse = any(mark in texte.lower() for mark in
+                      ("refus", "invalide", "doit définir", "interdit"))
+        return {"ok": not refuse, "texte": texte}
 
     @outil("lister_erreurs",
            "Liste les erreurs récentes des outils de JIBI (journal interne) pour les analyser.",
@@ -297,38 +326,44 @@ def enregistrer_outil() -> None:
            "syntaxe, sécurité, appel d'essai. À faire AVANT de demander la validation.",
            {"nom": {"type": "str", "obligatoire": True, "description": "nom de la proposition"}},
            categorie="amelioration")
-    def tester_proposition_outil(nom: str) -> str:
+    def tester_proposition_outil(nom: str) -> dict:
         verdict = tester_proposition(nom)
-        return verdict["resume"]
+        return {"ok": bool(verdict.get("ok")), "texte": verdict["resume"]}
 
     @outil("lancer_verification",
            "Relance la suite de vérification complète de JIBI (tests internes) et renvoie le bilan.",
            {}, categorie="amelioration",
            exemple='{"outil": "lancer_verification", "parametres": {}}')
-    def lancer_verification_outil() -> str:
-        return lancer_verification()
+    def lancer_verification_outil() -> dict:
+        texte = lancer_verification()
+        return {"ok": "❌" not in texte, "texte": texte}
 
     @outil("analyser_code_projet",
            "Analyse le code source de JIBI lui-même : compile chaque fichier et donne "
            "l'inventaire (fichiers, lignes, outils). Pour l'auto-contrôle.",
            {}, categorie="amelioration")
-    def analyser_code_projet_outil() -> str:
-        return verifier_code_projet()
+    def analyser_code_projet_outil() -> dict:
+        texte = verifier_code_projet()
+        return {"ok": texte.startswith("✅"), "texte": texte}
 
     @outil("lire_code_outil",
            "Relit le code source d'un outil installé (pour préparer une correction avec proposer_nouvel_outil).",
            {"nom": {"type": "str", "obligatoire": True, "description": "nom exact de l'outil"}},
            categorie="amelioration")
-    def lire_code_outil_outil(nom: str) -> str:
-        return lire_code_outil(nom)
+    def lire_code_outil_outil(nom: str) -> dict:
+        texte = lire_code_outil(nom)
+        return {"ok": not texte.startswith(("Outil", "Impossible")), "texte": texte}
 
     @outil("activer_proposition",
-           "Active (installe) une proposition d'outil — AUTORISATION ACCORDÉE "
-           "par l'utilisateur : tu peux le faire toi-même une fois le test bac "
-           "à sable passé. La sécurité est re-vérifiée à l'activation.",
+           "Active (installe) une proposition d'outil après le test bac à sable. "
+           "En autonomie, tu peux l'appeler toi-même ; la sécurité et l'intégrité "
+           "sont revérifiées juste avant l'installation.",
            {"nom": {"type": "str", "obligatoire": True,
                     "description": "nom de la proposition à activer"}},
            categorie="amelioration", risque="moyen",
            exemple="activer ma proposition → nom=le_nom_de_la_proposition")
-    def activer_proposition_outil(nom: str) -> str:
-        return valider(nom)
+    def activer_proposition_outil(nom: str) -> dict:
+        texte = valider(nom)
+        refuse = any(mark in texte.lower() for mark in
+                      ("refus", "échec", "erreur", "introuvable", "invalid"))
+        return {"ok": not refuse and ("validée" in texte or "activée" in texte), "texte": texte}

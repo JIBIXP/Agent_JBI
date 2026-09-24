@@ -26,6 +26,9 @@ def _dossier() -> Path:
 
 
 def _chemin(nom: str) -> Path:
+    nom = (nom or "").strip().removesuffix(".json")
+    if not _MOTIF_NOM.match(nom):
+        raise ValueError("nom de workflow invalide")
     return _dossier() / f"{nom}.json"
 
 
@@ -102,7 +105,10 @@ def lister() -> str:
 
 
 def supprimer(nom: str) -> str:
-    chemin = _chemin((nom or "").strip().removesuffix(".json"))
+    try:
+        chemin = _chemin(nom)
+    except ValueError:
+        return "Nom de workflow invalide."
     if not chemin.exists():
         return f"Aucun workflow « {nom} »."
     chemin.unlink()
@@ -110,8 +116,10 @@ def supprimer(nom: str) -> str:
 
 
 def executer(nom: str) -> str:
-    nom = (nom or "").strip().removesuffix(".json")
-    chemin = _chemin(nom)
+    try:
+        chemin = _chemin(nom)
+    except ValueError:
+        return "Nom de workflow invalide."
     if not chemin.exists():
         return f"Aucun workflow « {nom} ». Voir lister_workflows."
     try:
@@ -164,8 +172,8 @@ def executer(nom: str) -> str:
        exemple='{"outil": "creer_workflow", "parametres": {"nom": "routine_soir", '
                '"description": "Résumé du soir", "etapes": "[{\\"outil\\": \\"lister_rappels\\", '
                '\\"parametres\\": {}}]"}}')
-def creer_workflow(nom: str, description: str, etapes: str) -> str:
-    return creer(nom, description, etapes)
+def creer_workflow(nom: str, description: str, etapes: str, horaire: str = "") -> str:
+    return creer(nom, description, etapes, horaire)
 
 
 @outil("lister_workflows", "Liste les workflows (routines) disponibles.", {},

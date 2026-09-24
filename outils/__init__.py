@@ -66,20 +66,27 @@ def charger_integres() -> None:
     """Importe les modules d'outils intégrés (idempotent)."""
     from . import (  # noqa: F401
         amaran,
+        analyse,
         applications,
+        bureautique,
         calcul,
         chrome,
         design,
         documents,
         fichiers,
+        imports,
         jeux,
         memoire_faits,
+        localisation,
+        navigateur,
         notes,
         notifications,
+        signaux,
         noyau,
         rappels,
         souris,
         systeme,
+        traduction,
         vision,
         voix,
         web,
@@ -107,6 +114,9 @@ def charger_perso() -> int:
             traceback.print_exc()
     return total
 
+# Import direct pour compatibilité maximale
+from .imports import importer_fichier, importer_buffer
+
 
 # ------------------------------------------------------------------- catalogue
 # ------------------------------------------------- jeu d'outils adaptatif
@@ -117,22 +127,29 @@ def charger_perso() -> int:
 NOYAU = frozenset({
     "heure_actuelle", "calculer",
     "ouvrir_application", "ouvrir_chrome", "ouvrir_site_web", "rechercher_web",
-    "retenir", "rappeler", "ajouter_note", "lister_notes",
+    "chercher_dans_chrome", "retenir", "rappeler", "ajouter_note", "lister_notes",
     "programmer_rappel", "lister_rappels", "notifier",
     "creer_workflow", "lister_workflows",
-    "batterie", "espace_disque", "creer_pdf", "creer_word",
-    "ouvrir_panneau",
+    "batterie", "espace_disque", "tableau_signaux", "creer_pdf", "creer_word", "creer_cours",
+    "gestionnaire_fichiers", "ouvrir_panneau",
 })
 
 # (motif sur le message sans accents → outils ajoutés au jeu montré)
 DOMAINES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (r"fichier|dossier", ("lire_fichier", "ecrire_fichier", "lister_dossier",
-                          "chercher_fichier", "ajouter_fichier", "supprimer_fichier")),
-    (r"telechargement|\bbureau\b|mon pc|disque c", ("lire_fichier_pc", "lister_dossier_pc")),
+                          "chercher_fichier", "chercher_fichiers_pc",
+                          "ajouter_fichier", "supprimer_fichier", "importer_fichier",
+                          "copier_document", "deplacer_document",
+                          "gestionnaire_fichiers", "configurer_deplacement")),
+    (r"telechargement|téléchargement|downloads|\bbureau\b|\bdesktop\b|mon pc|disque c|dossier personnel|mes fichiers", (
+        "lire_fichier_pc", "lister_dossier_pc", "copier_document", "deplacer_document",
+        "gestionnaire_fichiers", "configurer_deplacement")),
     (r"\bnotes?\b|pense[- ]?bete", ("chercher_notes", "supprimer_note")),
     (r"annul", ("annuler_rappel",)),
-    (r"volume|\bson\b|musique|silence|muet|chanson", ("monter_volume", "baisser_volume", "couper_son")),
-    (r"processus|processeur|\bcpu\b|\bram\b|memoire vive|fiche du pc", ("processus", "info_systeme")),
+    (r"volume|son|luminosité|écran|moniteur|lumiere|éclairage|brightness", ("monter_volume", "baisser_volume", "couper_son", "monter_luminosite", "baisser_luminosite", "luminosite_actuelle")),
+    (r"processus|processeur|\bcpu\b|\bram\b|memoire vive|fiche du pc|signaux|"
+     r"surveill|alerte|reseau", ("processus", "info_systeme", "tableau_signaux",
+                                 "surveiller_signaux")),
     (r"eteins|eteindre|redemarre|arrete le pc", ("eteindre_pc",)),
     (r"commande|terminal|powershell|\bcmd\b|ipconfig|\bping\b", ("executer_commande",)),
     (r"ecran|capture|regarde|\bvois\b", ("voir_ecran",)),
@@ -142,22 +159,53 @@ DOMAINES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (r"\bjeux?\b|pile ou face|mystere|pierre|feuille|ciseaux|lance un de",
      ("lancer_un_de", "pile_ou_face", "pierre_feuille_ciseaux", "nombre_mystere")),
     (r"panneau|tableau de bord", ("ouvrir_panneau",)),
-    (r"design|couleur[s]? de (l'?orbe|l'?interface|jibi)|\btheme\b|personnalise",
+    (r"design|couleur[s]? de (l'?orbe|l'?interface|jibi)|personnalise",
      ("personnaliser_design",)),
     (r"voix (masculine|feminine|homme|femme)|changer (de |la |ma )?voix|quelle voix|change (ta |de )?voix",
      ("changer_voix",)),
     (r"\bnoyau\b|auto[- ]?modifi|modifie (le|ton) (code|programme)|code source de jibi",
-     ("modifier_noyau", "restaurer_noyau")),
-    (r"mise[s]? a jour|mettre a jour|mets a jour|nouvelle version|version de jibi|a jour",
-     ("verifier_mise_a_jour",)),
-    (r"onglet|cette page|page active|\bresume\b|traduis", (
+     ("lire_code_noyau", "modifier_noyau", "restaurer_noyau")),
+    (r"mise[s]? a jour|mettre a jour|mets a jour|nouvelle version|version de jibi|a jour|"
+      r"winget|windows update",
+     ("verifier_mise_a_jour", "verifier_mises_a_jour_pc", "installer_mise_a_jour")),
+    (r"browser[ -]?use|navigateur|page dynamique|javascript|dom|naviguer", (
+        "statut_browser_use", "lire_site_browser", "naviguer_browser_use", "naviguer_autonome")),
+    (r"video|vidéo|musique|music|chanson|album|artiste", (
+        "chercher_video", "chercher_music", "chercher_site")),
+    (r"onglet|cette page|page active|\bresume\b|traduis|traduire|traduction|cherche.*chrome|recherche.*chrome", (
         "lister_onglets", "ouvrir_onglet", "activer_onglet",
-        "fermer_onglet", "lire_onglet_actif")),
-    (r"page web|lire (la |cette )?page|https?://", ("lire_page_web",)),
+        "fermer_onglet", "lire_onglet_actif", "chercher_web_local",
+        "chercher_google_headless", "chercher_dans_chrome", "traduire", "langues_disponibles")),
+    (r"\bcompte\b|connecte|connexion|\blogin\b|session chrome|chromejibi", (
+        "ouvrir_compte_chrome", "lister_onglets", "ouvrir_onglet")),
+    (r"\bcours\b|\bexposé\b|\bexpose\b|leçon|lecon|chapitre|fiche pédagogique", (
+        "chercher_google_headless", "chercher_web_local", "lire_page_web",
+        "creer_cours", "creer_document", "creer_word")),
+    (r"analyse|analyser|fichier pdf|fichier word|fichier excel|\bcsv\b|\bjson\b|document|classeur|tableur|tableau|excel|présentation|presentation|powerpoint|pptx|theme|thème|motif|spec", (
+        "analyser_fichier", "analyser_dossier", "analyser_documents",
+        "analyser_excel", "chercher_fichiers_pc", "lire_fichier", "lire_fichier_pc",
+        "importer_fichier", "creer_document", "exemple_document", "creer_excel")),
+    (r"dessin|dessiner|schéma|schema|diagramme|emoji|émojis|emotifs?|emoticons?", (
+        "creer_document", "creer_word", "creer_pdf")),
+    (r"image|photo|vignette|visuel|illustration", (
+        "rechercher_images_web", "images_page_web", "telecharger_image_web",
+        "analyser_fichier", "voir_image", "importer_fichier")),
+    (r"page web|lire (la |cette )?page|https?://|va sur|visite|site|parcourir", (
+        "lire_page_web", "visiter_site", "chercher_site",
+        "lire_site_browser", "naviguer_browser_use")),
+    (r"geolocalisation|géolocalisation|position|ou je suis|ou suis[- ]?je|pres de|près de|restaurant|pharmacie|garage", (
+        "localisation_approchee", "rechercher_pres")),
+    (r"autonome|autonomie|am[ée]lior[ -]?toi|apprend|auto[- ]?apprend|"
+     r"ajout(?:e|er).*fonctionnalit|fais.*mise.*jour.*jibi|am[ée]lior.*jibi", (
+        "ameliorer_autonomement", "configurer_autonomie", "statut_autonomie",
+        "consulter_audit", "lister_erreurs", "analyser_code_projet",
+        "naviguer_autonome", "traduire")),
     (r"\bcode\b|\btests?\b|verifie|amelior|propose|\boutil|erreur|\bbug\b|corrige", (
         "analyser_code_projet", "lancer_verification", "lire_code_outil",
         "lister_erreurs", "proposer_nouvel_outil", "tester_proposition",
-        "activer_proposition")),
+        "activer_proposition", "lire_code_noyau", "modifier_noyau",
+        "restaurer_noyau", "ameliorer_autonomement", "configurer_autonomie",
+        "statut_autonomie", "consulter_audit", "lire_progression")),
     (r"routine|chaque (jour|matin|soir)", ("executer_workflow", "supprimer_workflow")),
 )
 
@@ -230,6 +278,10 @@ def executer(nom: str, parametres: dict, garde) -> dict:
         return {"ok": False, "texte": texte, "risque": "faible"}
     o = OUTILS[nom]
     parametres = parametres or {}
+    if not isinstance(parametres, dict):
+        texte = f"Paramètres invalides pour {nom} : un objet JSON est requis."
+        _journaliser_echec(nom, texte)
+        return {"ok": False, "texte": texte, "risque": o.risque}
     manquants = [p for p, i in o.parametres.items()
                  if i.get("obligatoire") and p not in parametres]
     if manquants:
@@ -276,6 +328,13 @@ try:
     from jibi2.evolution import enregistrer_outil
 
     enregistrer_outil()
+except Exception:
+    pass
+
+try:
+    from jibi2.autonomie import enregistrer_outil as enregistrer_outil_autonomie
+
+    enregistrer_outil_autonomie()
 except Exception:
     pass
 

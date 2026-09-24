@@ -53,6 +53,22 @@ def _analyser(image_jpeg: bytes, prompt: str) -> str:
     return (donnees.get("message") or {}).get("content", "").strip() or "(réponse vide)"
 
 
+def _analyser_fichier_image(chemin, question: str) -> str:
+    """Prépare une image de l'espace de travail pour le modèle visuel."""
+    from PIL import Image
+    prompt = question.strip() or "Décris brièvement cette image, en français."
+    try:
+        with Image.open(chemin) as image:
+            image.thumbnail((1024, 1024))
+            if image.mode not in ("RGB", "L"):
+                image = image.convert("RGB")
+            tampon = io.BytesIO()
+            image.save(tampon, format="JPEG", quality=75)
+    except Exception as e:  # noqa: BLE001
+        return f"Image illisible : {e}"
+    return _analyser(tampon.getvalue(), prompt)
+
+
 @outil("voir_ecran", "Regarde l'écran du PC (capture d'écran) et répond à une question sur ce qu'il voit. "
                      "Utilise le modèle de vision local léger (moondream).",
        {"question": {"type": "str", "obligatoire": False,
@@ -70,3 +86,26 @@ def voir_ecran(question: str = "") -> str:
     dossier.mkdir(parents=True, exist_ok=True)
     (dossier / f"ecran_{int(time.time())}.jpg").write_bytes(image)
     return _analyser(image, prompt)
+
+
+@outil("voir_image",
+       "Observe une image téléchargée dans donnees/fichiers et répond à une question "
+       "sur son contenu avec le modèle de vision local. Utilise telecharger_image_web "
+       "pour une image trouvée sur le web.",
+       {"chemin": {"type": "str", "obligatoire": True,
+                   "description": "nom de l'image dans donnees/fichiers"},
+        "question": {"type": "str", "obligatoire": False,
+                     "description": "question ou description demandée"}},
+       categorie="vision", risque="moyen",
+       exemple='{"outil": "voir_image", "parametres": {"chemin": "image.jpg", "question": "qu\'y a-t-il ?"}}')
+def voir_image(chemin: str, question: str = "") -> str:
+    from outils.fichiers import _chemin_espace
+    try:
+        cible = _chemin_espace(chemin)
+    except ValueError as e:
+        return str(e)
+    if not cible.is_file():
+        return f"Image introuvable dans l'espace de travail : {chemin}"
+    if cible.suffix.lower() not in (".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp"):
+        return "Le fichier n'est pas une image reconnue."
+    return _analyser_fichier_image(cible, question)
