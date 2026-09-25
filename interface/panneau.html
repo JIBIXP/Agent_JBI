@@ -3,150 +3,550 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>JIBI — tableau de bord</title>
+<title>JIBI — console</title>
 <style>
   :root {
-    --fond:#080b14; --fond2:#0e1222; --carte:#111827; --carte2:#1b2340;
-    --champ:#202b45; --champ-bord:#3a496b; --bord:#29345c;
-    --violet:#b39cff; --bleu:#54b9ff; --texte:#f2f2f2; --pur:#ffffff;
-    --gris:#a0a0a0; --vert:#63e6b5; --orange:#ffbe72; --rouge:#ff7f9e;
+    --fond:#0c0f0e; --fond2:#101413; --carte:#141a18; --carte2:#1d2623;
+    --champ:#1f2a26; --champ-bord:#31463e; --bord:#263229;
+    --accent:#2fd6a3; --accent2:#7cf0cc; --bleu:#5cc8e8;
+    --texte:#eef2f0; --pur:#ffffff; --gris:#9aa8a2;
+    --vert:#7cf0cc; --orange:#ffc46b; --rouge:#ff8080;
   }
   * { box-sizing:border-box; margin:0; }
-  body { min-height:100vh; background:radial-gradient(circle at 50% -20%,#20275b 0,var(--fond) 48%);
-         color:var(--texte); font:15px/1.5 "Segoe UI",system-ui,sans-serif; overflow:hidden;
+  html,body { height:100%; }
+  body { background:var(--fond); color:var(--texte);
+         font:15px/1.55 "Segoe UI",system-ui,sans-serif; overflow:hidden;
          -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
-  .lumiere-bas { position:fixed; z-index:20; left:0; right:0; bottom:0; height:105px;
-                 pointer-events:none; opacity:.12; transition:opacity .35s,background .35s;
-                 background:linear-gradient(0deg,rgba(130,91,255,.72),transparent 78%); filter:blur(9px); }
-  body.parle .lumiere-bas { opacity:.34; background:linear-gradient(0deg,rgba(0,0,0,.78),rgba(30,15,65,.18) 58%,transparent 90%); }
-  body.ecoute .lumiere-bas { opacity:.55; background:linear-gradient(0deg,rgba(40,164,255,.75),rgba(130,80,255,.22) 58%,transparent 90%); }
-  #app { height:100vh; display:grid; grid-template-rows:auto 1fr auto; }
-  header { display:flex; align-items:center; gap:13px; padding:15px 22px; border-bottom:1px solid var(--bord);
-           background:rgba(8,11,20,.78); backdrop-filter:blur(12px); z-index:3; }
-  .orbe { position:relative; width:20px; height:20px; border-radius:50%; flex:0 0 auto;
-          background:radial-gradient(circle at 32% 28%,#fff,#a78bff 35%,#4930a5 78%);
-          box-shadow:0 0 15px #8d6bff99; }
-  .orbe:before,.orbe:after { content:""; position:absolute; inset:-8px; border:1px solid #8b6cff88;
+
+  /* ── structure : barre latérale + zone principale ─────────────── */
+  #app { height:100vh; display:grid; grid-template-columns:264px 1fr; }
+  #app.replie { grid-template-columns:0 1fr; }
+  aside { min-width:0; display:flex; flex-direction:column; background:var(--carte);
+          border-right:1px solid var(--bord); overflow:hidden; }
+  #app.replie aside { border-right:none; }
+
+  .marque { display:flex; align-items:center; gap:10px; padding:18px 16px 14px; }
+  .orbe { position:relative; width:22px; height:22px; border-radius:50%; flex:0 0 auto;
+          background:radial-gradient(circle at 32% 28%,#fff,#2fd6a3 38%,#0d3a2e 82%);
+          box-shadow:0 0 14px #2fd6a388; transition:background .3s, box-shadow .3s; }
+  .orbe:before,.orbe:after { content:""; position:absolute; inset:-7px; border:1px solid #2fd6a377;
           border-radius:50%; opacity:0; }
-  body.reflexion .orbe { animation:pulse 1s infinite alternate; }
-  body.ecoute .orbe { background:radial-gradient(circle at 32% 28%,#fff,#54b9ff 36%,#2449b7 80%); box-shadow:0 0 19px #39a8ff; }
+  body.ecoute .orbe { background:radial-gradient(circle at 32% 28%,#fff,#5cc8e8 38%,#0a3d4a 82%);
+                      box-shadow:0 0 18px #5cc8e8; }
   body.ecoute .orbe:before { animation:onde 1.35s ease-out infinite; }
-  body.ecoute .orbe:after { animation:onde 1.35s .45s ease-out infinite; border-color:#55b9ff99; }
-  body.parle .orbe { animation:parle .75s ease-in-out infinite alternate; }
-  @keyframes pulse { to { transform:scale(1.25); box-shadow:0 0 25px #b18cff; } }
-  @keyframes onde { 0% { transform:scale(.55); opacity:.9; } 100% { transform:scale(2.5); opacity:0; } }
-  @keyframes parle { to { transform:scale(1.14); box-shadow:0 0 25px #54b9ff; } }
-  h1 { color:var(--pur); font-size:18px; letter-spacing:.7px; font-weight:700; }
-  .sous { color:var(--gris); font-size:12px; }
-  #etat { margin-left:auto; color:var(--gris); text-align:right; font-size:12px; }
+  body.ecoute .orbe:after { animation:onde 1.35s .45s ease-out infinite; border-color:#5cc8e899; }
+  body.reflexion .orbe { background:radial-gradient(circle at 32% 28%,#fff,#ffc46b 38%,#4a3614 82%);
+                         box-shadow:0 0 18px #ffc46b; animation:pulse .9s infinite alternate; }
+  body.parle .orbe { background:radial-gradient(circle at 32% 28%,#fff,#7cf0cc 38%,#0d4d33 82%);
+                     box-shadow:0 0 20px #7cf0cc; animation:parle .75s ease-in-out infinite alternate; }
+  @keyframes pulse { to { transform:scale(1.22); } }
+  @keyframes onde { 0% { transform:scale(.55); opacity:.9; } 100% { transform:scale(2.4); opacity:0; } }
+  @keyframes parle { to { transform:scale(1.15); } }
+  .marque h1 { font-size:17px; letter-spacing:2px; font-weight:700; color:var(--pur); }
+  .marque .sous { color:var(--gris); font-size:11px; letter-spacing:.4px; }
+
+  .bloc-nav { padding:6px 10px; }
+  .bloc-nav h2 { font-size:10.5px; text-transform:uppercase; letter-spacing:1.4px;
+                 color:var(--gris); margin:14px 8px 6px; font-weight:700; }
+  .lien { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px;
+          background:transparent; color:var(--gris); border:0; border-radius:10px;
+          cursor:pointer; font:inherit; font-size:13.5px; text-align:left; }
+  .lien:hover { background:var(--carte2); color:var(--texte); }
+  .lien.actif { background:var(--champ); color:var(--accent2); }
+  .lien svg { flex:0 0 auto; width:17px; height:17px; }
+
+  .sessions { flex:1; min-height:0; overflow-y:auto; padding:2px 10px 10px; }
+  .session { width:100%; text-align:left; background:transparent; border:0; color:var(--gris);
+             font:inherit; font-size:12.5px; padding:7px 10px; border-radius:8px;
+             cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .session:hover { background:var(--carte2); color:var(--texte); }
+  .session.actif { background:var(--champ); color:var(--texte); }
+  .pied-aside { padding:10px 12px 14px; border-top:1px solid var(--bord);
+                display:flex; flex-direction:column; gap:8px; }
+  .bouton-secondaire { display:flex; align-items:center; justify-content:center; gap:8px;
+                       width:100%; padding:8px 10px; background:var(--carte2); color:var(--texte);
+                       border:1px solid var(--bord); border-radius:10px; cursor:pointer;
+                       font:inherit; font-size:13px; }
+  .bouton-secondaire:hover { border-color:var(--accent); color:var(--accent2); }
+  .bouton-danger { color:var(--rouge); }
+  .bouton-danger:hover { border-color:var(--rouge); color:var(--rouge); }
+
+  /* ── zone principale ───────────────────────────────────────────── */
+  #principal { min-width:0; display:grid; grid-template-rows:auto 1fr auto; height:100vh; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 20px;
+           border-bottom:1px solid var(--bord); background:rgba(12,15,14,.85); }
+  #basculer-menu { background:transparent; border:1px solid var(--bord); color:var(--gris);
+                   border-radius:9px; padding:7px 11px; cursor:pointer; font:inherit; font-size:13px; }
+  #basculer-menu:hover { color:var(--texte); border-color:var(--champ-bord); }
+  #titre-page { color:var(--pur); font-size:15px; font-weight:650; letter-spacing:.3px; }
+  #etat { margin-left:auto; color:var(--gris); text-align:right; font-size:12.5px; }
   #etat b { color:var(--vert); font-weight:600; }
-  main { min-height:0; display:grid; grid-template-columns:minmax(0,1fr) 310px; gap:16px; padding:17px 20px 8px; }
-  .zone-chat { min-height:0; display:flex; flex-direction:column; gap:10px; }
-  #fil { min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:14px; padding:0 6px 4px 0; }
-  .bulle { max-width:82%; padding:13px 17px; border-radius:16px; white-space:pre-wrap; overflow-wrap:anywhere; line-height:1.5; }
-  .jibi { align-self:flex-start; color:var(--texte); background:var(--carte); border:1px solid var(--bord); border-bottom-left-radius:5px; }
-  .moi { align-self:flex-end; color:var(--texte); background:var(--carte2); border:1px solid var(--champ-bord); border-bottom-right-radius:5px; }
-  .actions { align-self:flex-start; display:flex; flex-wrap:wrap; gap:6px; }
-  .puce { font-size:12px; color:var(--gris); border:1px solid var(--bord); border-radius:20px; padding:2px 10px; }
-  .puce b { color:var(--vert); }
-  aside { min-height:0; overflow-y:auto; display:flex; flex-direction:column; gap:12px; }
-  .carte { background:rgba(20,26,44,.9); border:1px solid var(--bord); border-radius:15px; padding:13px; box-shadow:0 10px 30px #0003; }
-  .carte h2 { font-size:12px; color:var(--pur); text-transform:uppercase; letter-spacing:1.1px; margin-bottom:9px; font-weight:700; }
-  .progression { height:8px; background:#080c18; border-radius:8px; overflow:hidden; margin:8px 0; }
-  #barre { height:100%; width:0; background:linear-gradient(90deg,var(--bleu),var(--violet)); transition:width .35s; }
-  #progression-detail { color:var(--gris); font-size:12px; }
-  .document, .signal { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:7px 0; border-top:1px solid #ffffff0c; }
+  #etat b.hors { color:var(--orange); }
+
+  .panneau { min-height:0; overflow-y:auto; padding:20px 26px 10px; }
+  .page { display:none; max-width:860px; margin:0 auto; }
+  .page.visible { display:block; }
+  .page h2 { color:var(--pur); font-size:13px; text-transform:uppercase;
+             letter-spacing:1.2px; margin:18px 0 10px; }
+  .page h2:first-child { margin-top:0; }
+
+  #fil { display:flex; flex-direction:column; gap:16px; padding:4px 0 12px; }
+  .rangée { display:flex; gap:12px; max-width:92%; }
+  .rangée.moi { align-self:flex-end; flex-direction:row-reverse; }
+  .avatar { flex:0 0 34px; width:34px; height:34px; border-radius:50%; display:flex;
+            align-items:center; justify-content:center; font-weight:700; font-size:13px; }
+  .avatar.jibi { background:radial-gradient(circle at 32% 28%,#fff,#2fd6a3 40%,#0d3a2e 85%);
+                 color:#08251c; box-shadow:0 0 10px #2fd6a344; }
+  .avatar.moi { background:var(--carte2); color:var(--accent2); border:1px solid var(--champ-bord); }
+  .bulle-colonne { min-width:0; display:flex; flex-direction:column; gap:4px; }
+  .nom { font-size:11.5px; color:var(--gris); letter-spacing:.4px; }
+  .rangée.moi .nom { text-align:right; }
+  .bulle { padding:11px 15px; border-radius:14px; white-space:pre-wrap; overflow-wrap:anywhere;
+           line-height:1.55; background:var(--carte); border:1px solid var(--bord); }
+  .rangée.moi .bulle { background:var(--champ); border-color:var(--champ-bord);
+                       border-bottom-right-radius:5px; }
+  .rangée:not(.moi) .bulle { border-bottom-left-radius:5px; }
+  .bulle.systeme { font:12.5px/1.6 Consolas,"Cascadia Mono",monospace; background:var(--fond2);
+                   border-color:var(--bord); }
+  .actions { display:flex; flex-wrap:wrap; gap:6px; }
+  .puce { font-size:11.5px; color:var(--gris); border:1px solid var(--bord);
+          border-radius:20px; padding:2px 10px; }
+  .puce.ok { color:var(--vert); border-color:#2fd6a355; }
+  .puce.ko { color:var(--rouge); border-color:#ff808055; }
+
+  .carte { background:var(--carte); border:1px solid var(--bord); border-radius:14px;
+           padding:14px 16px; margin-bottom:14px; }
+  .progression { height:8px; background:var(--fond2); border-radius:8px; overflow:hidden; margin:10px 0 8px; }
+  #barre { height:100%; width:0; border-radius:8px;
+           background:linear-gradient(90deg,var(--bleu),var(--accent)); transition:width .35s; }
+  #progression-detail { color:var(--gris); font-size:12.5px; }
+  .document, .signal { display:flex; justify-content:space-between; align-items:center; gap:8px;
+                       padding:8px 0; border-top:1px solid #ffffff0c; }
   .document:first-of-type,.signal:first-of-type { border-top:0; }
-  .document a { color:var(--bleu); text-decoration:none; font-size:13px; overflow-wrap:anywhere; }
+  .document a { color:var(--bleu); text-decoration:none; font-size:13.5px; overflow-wrap:anywhere; }
   .document a:hover { text-decoration:underline; }
-  #import-fichiers { display:none; }
-  #importer { margin-top:10px; border:1px solid var(--bord); border-radius:9px; padding:5px 9px; background:var(--carte2); color:var(--texte); cursor:pointer; }
-  .petit { color:var(--gris); font-size:11px; white-space:nowrap; }
-  .signaux { color:var(--texte); font-size:12px; line-height:1.65; font-family:Consolas,"Cascadia Mono",monospace;
-            background:#111827; border:1px solid var(--bord); border-radius:10px; padding:8px 10px; }
+  .petit { color:var(--gris); font-size:11.5px; white-space:nowrap; }
+  .signaux { color:var(--texte); font-size:12.5px; line-height:1.7;
+             font-family:Consolas,"Cascadia Mono",monospace; background:var(--fond2);
+             border:1px solid var(--bord); border-radius:10px; padding:10px 12px; }
   .signaux strong { color:var(--pur); font-weight:700; }
-  nav { display:flex; gap:7px; padding:0 20px 6px; flex-wrap:wrap; }
-  nav button { background:var(--carte); color:var(--gris); border:1px solid var(--bord); border-radius:20px; padding:5px 12px; cursor:pointer; font-size:12px; }
-  nav button:hover { color:var(--texte); border-color:var(--violet); }
-  footer { display:flex; align-items:flex-end; gap:9px; padding:10px 20px 17px; border-top:1px solid var(--bord); background:rgba(8,11,20,.8); }
-  .zone-saisie { flex:1; min-width:0; display:flex; align-items:flex-end; gap:8px; min-height:52px; max-height:150px;
-                  padding:8px 9px 8px 15px; background:var(--champ); border:1px solid var(--champ-bord); border-radius:15px;
-                  box-shadow:0 -5px 18px #0002; transition:border-color .18s,box-shadow .18s; }
-  .zone-saisie:focus-within { border-color:var(--violet); box-shadow:0 0 0 3px #b39cff22,0 -5px 18px #0003; }
-  #saisie { flex:1; min-width:0; min-height:34px; max-height:132px; resize:none; overflow-y:auto; background:transparent; border:0; color:var(--texte); padding:7px 0; font:inherit; line-height:1.5; outline:none; }
+  #import-fichiers { display:none; }
+
+  #raccourcis { display:flex; flex-wrap:wrap; gap:7px; padding:4px 26px 10px; }
+  .page-chat ~ #raccourcis {}
+  #raccourcis button { background:var(--carte); color:var(--gris); border:1px solid var(--bord);
+                       border-radius:20px; padding:5px 13px; cursor:pointer; font-size:12.5px;
+                       font-family:inherit; }
+  #raccourcis button:hover { color:var(--accent2); border-color:var(--accent); }
+
+  footer { padding:8px 26px 18px; }
+  .zone-saisie { max-width:860px; margin:0 auto; display:flex; align-items:flex-end; gap:10px;
+                 min-height:54px; max-height:170px; padding:8px 10px 8px 16px;
+                 background:var(--champ); border:1px solid var(--champ-bord); border-radius:16px;
+                 box-shadow:0 -6px 22px #0003; transition:border-color .18s,box-shadow .18s; }
+  .zone-saisie:focus-within { border-color:var(--accent);
+                              box-shadow:0 0 0 3px #2fd6a322,0 -6px 22px #0004; }
+  #saisie { flex:1; min-width:0; min-height:36px; max-height:150px; resize:none;
+            overflow-y:auto; background:transparent; border:0; color:var(--texte);
+            padding:8px 0; font:inherit; line-height:1.5; outline:none; }
   #saisie::placeholder { color:var(--gris); }
-  button.action { border:1px solid transparent; border-radius:12px; padding:10px 16px; font:inherit; font-weight:650; cursor:pointer; color:#151027; background:var(--violet); }
-  button.action:disabled { opacity:.45; cursor:default; }
-  #envoyer { flex:0 0 48px; width:48px; height:48px; padding:0; border:1px solid var(--champ-bord); border-radius:14px; background:#d9dced; color:#111827; font-size:27px; line-height:1; }
-  #envoyer:hover:not(:disabled) { background:var(--violet); color:#101322; border-color:var(--violet); }
-  #envoyer:disabled { background:#27314a; color:var(--gris); border-color:var(--champ-bord); }
-  @media (max-width:850px) { main { grid-template-columns:1fr; padding:12px; } aside { display:grid; grid-template-columns:1fr 1fr; max-height:220px; } nav,footer { padding-left:12px; padding-right:12px; } }
-  @media (max-width:560px) { aside { display:flex; max-height:180px; } .bulle { max-width:92%; } }
+  .rond { flex:0 0 44px; width:44px; height:44px; padding:0; border:1px solid var(--champ-bord);
+          border-radius:50%; background:var(--carte2); color:var(--texte); cursor:pointer;
+          display:flex; align-items:center; justify-content:center; }
+  .rond svg { width:19px; height:19px; }
+  .rond:hover { border-color:var(--accent); color:var(--accent2); }
+  .rond:disabled { opacity:.4; cursor:default; }
+  #envoyer { background:var(--accent); border-color:var(--accent); color:#08251c; }
+  #envoyer:hover:not(:disabled) { background:var(--accent2); border-color:var(--accent2); color:#08251c; }
+  #envoyer:disabled { background:var(--carte2); color:var(--gris); border-color:var(--bord); }
+  #micro.ecoute { background:#0a3d4a; border-color:var(--bleu); color:var(--bleu);
+                  animation:pulse .9s infinite alternate; }
+
+  .vide { color:var(--gris); font-size:13px; padding:8px 0; }
+  .narrow { max-width:860px; margin:0 auto; }
+
+  @media (max-width:900px) {
+    #app { grid-template-columns:0 1fr; }
+    #app.ouvert { grid-template-columns:250px 1fr; }
+    .panneau { padding:14px 14px 6px; }
+    #raccourcis,footer { padding-left:14px; padding-right:14px; }
+    .rangée { max-width:100%; }
+  }
+  ::-webkit-scrollbar { width:9px; height:9px; }
+  ::-webkit-scrollbar-thumb { background:var(--champ-bord); border-radius:9px; }
+  ::-webkit-scrollbar-track { background:transparent; }
 </style>
 </head>
 <body>
-<div class="lumiere-bas"></div>
 <div id="app">
-  <header>
-    <div class="orbe" id="orbe"></div>
-    <div><h1>JIBI</h1><div class="sous">interface locale · écoute · action · évolution</div></div>
-    <div id="etat">connexion…</div>
-  </header>
-  <main>
-    <section class="zone-chat">
+  <aside id="aside">
+    <div class="marque">
+      <div class="orbe" id="orbe"></div>
+      <div><h1>JIBI</h1><div class="sous">assistant local · 100 % sur ton PC</div></div>
+    </div>
+    <div class="bloc-nav">
+      <button class="lien actif" id="nav-chat" data-page="chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.2A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg>
+        Conversation</button>
+      <button class="lien" id="nav-docs" data-page="documents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>
+        Documents</button>
+      <button class="lien" id="nav-signaux" data-page="signaux">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg>
+        Signaux du PC</button>
+      <button class="lien" id="nav-progress" data-page="progression">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/></svg>
+        Évolution</button>
+    </div>
+    <div class="bloc-nav" style="display:flex;flex-direction:column;min-height:0;flex:1;">
+      <h2>Sessions récentes</h2>
+      <div class="sessions" id="sessions"><div class="vide">Chargement…</div></div>
+    </div>
+    <div class="pied-aside">
+      <button class="bouton-secondaire" id="nouvelle-session">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Nouvelle session</button>
+      <button class="bouton-secondaire bouton-danger" id="supprimer-session">Supprimer la session</button>
+    </div>
+  </aside>
+
+  <div id="principal">
+    <header>
+      <button id="basculer-menu" title="Afficher ou masquer le menu">☰</button>
+      <div id="titre-page">Conversation</div>
+      <div id="etat">connexion…</div>
+    </header>
+
+    <!-- ── page conversation ─────────────────────────────────────── -->
+    <div class="panneau page visible" id="page-chat">
       <div id="fil"></div>
-      <nav id="raccourcis"></nav>
-    </section>
-    <aside>
-      <section class="carte">
-        <h2>Progression</h2>
-        <div class="progression"><div id="barre"></div></div>
-        <div id="progression-detail">Aucune tâche en cours</div>
-      </section>
-      <section class="carte">
+    </div>
+
+    <!-- ── page documents ────────────────────────────────────────── -->
+    <div class="panneau page" id="page-documents">
+      <div class="narrow">
         <h2>Documents prêts</h2>
-        <div id="documents"><div class="petit">Aucun document</div></div>
-        <input id="import-fichiers" type="file" multiple accept=".pdf,.docx,.xlsx,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp,.bmp">
-        <button id="importer">Importer document / image</button>
-      </section>
-      <section class="carte">
+        <div class="carte">
+          <div id="documents"><div class="vide">Aucun document</div></div>
+          <input id="import-fichiers" type="file" multiple
+                 accept=".pdf,.docx,.xlsx,.csv,.txt,.md,.json,.png,.jpg,.jpeg,.gif,.webp,.bmp">
+          <button class="bouton-secondaire" id="importer" style="margin-top:12px;">Importer document / image</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── page signaux ──────────────────────────────────────────── -->
+    <div class="panneau page" id="page-signaux">
+      <div class="narrow">
         <h2>Signaux du PC</h2>
         <div id="signaux" class="signaux">Analyse en cours…</div>
-      </section>
-    </aside>
-  </main>
-  <footer>
-    <div class="zone-saisie" id="zone-saisie">
-      <textarea id="saisie" rows="1" placeholder="Demande quelque chose à JIBI… (Entrée pour envoyer, Maj+Entrée pour une ligne)" autocomplete="off"></textarea>
-      <button class="action" id="envoyer" aria-label="Envoyer le message" title="Envoyer">↑</button>
+      </div>
     </div>
-  </footer>
+
+    <!-- ── page évolution ────────────────────────────────────────── -->
+    <div class="panneau page" id="page-progress">
+      <div class="narrow">
+        <h2>Jauge d'évolution</h2>
+        <div class="carte">
+          <div class="progression"><div id="barre"></div></div>
+          <div id="progression-detail">Aucune tâche en cours</div>
+        </div>
+        <h2>Dernier audit</h2>
+        <div id="audit" class="signaux">Aucun événement</div>
+      </div>
+    </div>
+
+    <div id="raccourcis"></div>
+
+    <footer>
+      <div class="zone-saisie" id="zone-saisie">
+        <textarea id="saisie" rows="1" autocomplete="off"
+          placeholder="Demande quelque chose à JIBI… (Entrée pour envoyer, Maj+Entrée pour une nouvelle ligne)"></textarea>
+        <button class="rond" id="micro" title="Parler au micro" aria-label="Parler au micro">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/></svg>
+        </button>
+        <button class="rond" id="importer-court" title="Joindre un fichier" aria-label="Joindre un fichier">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21.4 11.05 12.25 20.2a6 6 0 0 1-8.49-8.49l8.57-8.57a4 4 0 1 1 5.66 5.66l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+        </button>
+        <button class="rond" id="envoyer" title="Envoyer" aria-label="Envoyer le message" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg>
+        </button>
+      </div>
+    </footer>
+  </div>
 </div>
+
 <script>
 "use strict";
-const fil=document.getElementById("fil"), saisie=document.getElementById("saisie"),
-      zoneSaisie=document.getElementById("zone-saisie"), bouton=document.getElementById("envoyer"),
-      etat=document.getElementById("etat"), barre=document.getElementById("barre"),
-      progres=document.getElementById("progression-detail"), documents=document.getElementById("documents"),
-      signaux=document.getElementById("signaux"), importInput=document.getElementById("import-fichiers"),
-      importButton=document.getElementById("importer");
+const $=id=>document.getElementById(id);
+const fil=$("fil"),saisie=$("saisie"),bouton=$("envoyer"),etat=$("etat"),
+      barre=$("barre"),progres=$("progression-detail"),documents=$("documents"),
+      signaux=$("signaux"),importInput=$("import-fichiers"),importButton=$("importer"),
+      importCourt=$("importer-court"),microBouton=$("micro"),app=$("app"),
+      sessions=$("sessions"),audit=$("audit");
 const RACCOURCIS=["Quelle heure est-il ?","Quels sont tes signaux PC ?","Ouvre mon compte Google",
                   "Analyse un fichier","Lance un dé","Prends une note : penser à JIBI","Améliore-toi"];
-function nettoyer(texte){return String(texte??"").replace(/\u00a0/g," ").replace(/\u202f/g," ").replace(/�/g," ");}
-function bulle(texte,moi){const d=document.createElement("div");d.className="bulle "+(moi?"moi":"jibi");d.textContent=nettoyer(texte);fil.appendChild(d);fil.scrollTop=fil.scrollHeight;return d;}
-function ajusterSaisie(){saisie.style.height="auto";const hauteur=Math.min(saisie.scrollHeight,132);saisie.style.height=Math.max(34,hauteur)+"px";saisie.style.overflowY=saisie.scrollHeight>132?"auto":"hidden";bouton.disabled=!saisie.value.trim();}
-function puces(actions){if(!actions||!actions.length)return;const c=document.createElement("div");c.className="actions";for(const a of actions){const p=document.createElement("span");p.className="puce";p.textContent=a.ok?"Action terminée":"Action impossible";c.appendChild(p);}fil.appendChild(c);fil.scrollTop=fil.scrollHeight;}
-async function envoyer(texte){texte=nettoyer(texte||saisie.value).trim();if(!texte)return;saisie.value="";ajusterSaisie();bulle(texte,true);bouton.disabled=true;saisie.disabled=true;document.body.classList.add("reflexion","parle");const attente=bulle("…",false);try{const r=await fetch("/api/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texte})});const j=await r.json();attente.textContent=nettoyer(j.reponse||"(réponse vide)");puces(j.actions);}catch(e){attente.textContent="Serveur injoignable — JIBI tourne toujours ?";}document.body.classList.remove("reflexion");setTimeout(()=>document.body.classList.remove("parle"),650);saisie.disabled=false;saisie.focus();ajusterSaisie();rafraichirDocuments();}
-async function rafraichirEtat(){try{const j=await(await fetch("/api/etat")).json();etat.textContent=(j.ollama?"● prêt":"● Ollama éteint")+" · "+j.modele+" · "+j.outils+" outils · "+j.heure;}catch(e){etat.textContent="hors ligne";}}
-async function rafraichirProgression(){try{const p=await(await fetch("/api/progression")).json();const n=Math.max(0,Math.min(100,Number(p.pourcent)||0));barre.style.width=n+"%";progres.textContent=(p.actif?"● ":"")+n+" % · "+(p.titre||"Aucune tâche")+(p.etape?" — "+p.etape:"");}catch(e){}}
-async function importerFichiers(){const fichiers=[...importInput.files];if(!fichiers.length)return;const corps=new FormData();for(const f of fichiers)corps.append("fichier",f,f.name);importButton.disabled=true;try{const r=await fetch("/api/import",{method:"POST",body:corps});const j=await r.json();bulle((j.messages||[]).join("\n")||j.message||"Import terminé",false);await rafraichirDocuments();}catch(e){bulle("Import impossible.",false);}finally{importButton.disabled=false;importInput.value="";}}
-async function rafraichirDocuments(){try{const j=await(await fetch("/api/documents")).json();const ds=j.documents||[];documents.replaceChildren();if(!ds.length){const d=document.createElement("div");d.className="petit";d.textContent="Aucun document";documents.appendChild(d);return;}for(const x of ds){const row=document.createElement("div");row.className="document";const a=document.createElement("a");a.href=x.url;a.download=x.nom;a.textContent="Télécharger "+x.nom;const s=document.createElement("span");s.className="petit";s.textContent=Math.max(1,Math.round((x.taille||0)/1024))+" Ko";row.append(a,s);documents.appendChild(row);}}catch(e){}}
-async function rafraichirSignaux(){try{const s=await(await fetch("/api/signaux")).json();signaux.replaceChildren();for(const [k,v] of [["Batterie",s.batterie],["Disque",s.disque],["Réseau",s.reseau],["Erreurs JIBI",s.erreurs_jibi],["Documents",s.documents]]){const line=document.createElement("div");const b=document.createElement("strong");b.textContent=k+" : ";line.append(b,document.createTextNode(nettoyer(v||"—")));signaux.appendChild(line);}}catch(e){signaux.textContent="Signaux indisponibles";}}
-bouton.addEventListener("click",()=>envoyer());importButton.addEventListener("click",()=>importInput.click());importInput.addEventListener("change",importerFichiers);saisie.addEventListener("input",ajusterSaisie);saisie.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();envoyer();}});
-for(const r of RACCOURCIS){const b=document.createElement("button");b.textContent=r;b.addEventListener("click",()=>envoyer(r));document.getElementById("raccourcis").appendChild(b);}
-bulle("Salut ! Je suis prêt. Écris, parle ou demande-moi une analyse.",false);
+// La boule du panneau = même raccourci que la boule du bureau : cliquer = écouter.
+const orbePanneau=$("orbe");
+orbePanneau.style.cursor="pointer";
+orbePanneau.title="Clique : JIBI t'écoute";
+orbePanneau.addEventListener("click",()=>{
+  if(!microBouton.classList.contains("ecoute"))ecouterMicro();
+});
+const PAGES={chat:"Conversation",documents:"Documents",signaux:"Signaux du PC",progress:"Évolution"};
+let pageCourante="chat",sessionActive=null;
+
+function nettoyer(t){return String(t??"").replace(/\u00a0/g," ").replace(/\u202f/g," ").replace(/\ufffd/g," ");}
+function defiler(){fil.scrollTop=fil.scrollHeight;}
+function bulle(texte,moi,systeme){
+  const r=document.createElement("div");r.className="rangée"+(moi?" moi":"");
+  const av=document.createElement("div");av.className="avatar "+(moi?"moi":"jibi");av.textContent=moi?"Toi":"J";
+  const col=document.createElement("div");col.className="bulle-colonne";
+  const n=document.createElement("div");n.className="nom";n.textContent=(moi?"Toi":"JIBI")+" · "+new Date().toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"});
+  const b=document.createElement("div");b.className="bulle"+(systeme?" systeme":"");b.textContent=nettoyer(texte);
+  col.append(n,b);r.append(av,col);fil.appendChild(r);defiler();return b;
+}
+function puces(actions){
+  if(!actions||!actions.length)return;
+  const c=document.createElement("div");c.className="actions";
+  for(const a of actions){
+    const p=document.createElement("span");p.className="puce "+(a.ok?"ok":"ko");
+    p.textContent=(a.ok?"✓ ":"✗ ")+(a.outil||"action");
+    c.appendChild(p);
+  }
+  fil.appendChild(c);defiler();
+}
+function ajusterSaisie(){
+  saisie.style.height="auto";
+  const h=Math.min(saisie.scrollHeight,150);
+  saisie.style.height=Math.max(36,h)+"px";
+  saisie.style.overflowY=saisie.scrollHeight>150?"auto":"hidden";
+  bouton.disabled=!saisie.value.trim()||saisie.disabled;
+}
+async function envoyer(texte){
+  texte=nettoyer(texte||saisie.value).trim();
+  if(!texte)return;
+  saisie.value="";ajusterSaisie();
+  bulle(texte,true);bouton.disabled=true;saisie.disabled=true;
+  document.body.classList.add("reflexion");
+  const attente=bulle("…",false);
+  try{
+    const r=await fetch("/api/message",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({texte})});
+    const j=await r.json();
+    attente.textContent=nettoyer(j.reponse||"(réponse vide)");
+    puces(j.actions);
+    lireAHauteVoix(j.reponse);
+    rafraichirSessions();
+  }catch(e){
+    attente.textContent="Serveur injoignable — JIBI tourne toujours ?";
+  }
+  document.body.classList.remove("reflexion");
+  saisie.disabled=false;saisie.focus();ajusterSaisie();
+  rafraichirDocuments();
+}
+
+/* ── voix : JIBI parle ses réponses (interrupteur) ─────────── */
+let voixActive=false;
+async function lireAHauteVoix(texte){
+  if(!voixActive||!texte)return;
+  try{
+    await fetch("/api/parler",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({texte})});
+  }catch(e){}
+}
+const boutonVoix=document.createElement("button");
+boutonVoix.className="lien";boutonVoix.id="nav-voix";
+boutonVoix.innerHTML='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:17px;height:17px"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v4"/></svg> <span id="voix-libelle">Voix : off</span>';
+boutonVoix.addEventListener("click",async()=>{
+  voixActive=!voixActive;
+  boutonVoix.classList.toggle("actif",voixActive);
+  boutonVoix.querySelector("#voix-libelle").textContent="Voix : "+(voixActive?"on":"off");
+  if(voixActive)lireAHauteVoix("Voix activée.");
+});
+document.querySelector(".bloc-nav").appendChild(boutonVoix);
+fetch("/api/voix/etat").then(r=>r.json()).then(j=>{
+  if(!j.disponible){boutonVoix.style.display="none";}
+}).catch(()=>{});
+
+/* ── navigation pages ─────────────────────────────────────────── */
+function montrerPage(page){
+  pageCourante=PAGES[page]?page:"chat";
+  for(const p of document.querySelectorAll(".page"))p.classList.remove("visible");
+  $("page-"+(pageCourante==="progress"?"progress":pageCourante)).classList.add("visible");
+  $("titre-page").textContent=PAGES[pageCourante];
+  for(const b of document.querySelectorAll(".lien"))b.classList.toggle("actif",b.dataset.page===pageCourante);
+  if(pageCourante!=="chat")$("raccourcis").style.display="none";
+  else $("raccourcis").style.display="";
+  if(window.innerWidth<=900)app.classList.remove("ouvert");
+  if(pageCourante==="documents")rafraichirDocuments();
+  if(pageCourante==="signaux")rafraichirSignaux();
+  if(pageCourante==="progress"){rafraichirProgression();rafraichirAudit();}
+  if(pageCourante==="chat"){saisie.focus();defiler();}
+}
+for(const b of document.querySelectorAll(".lien"))b.addEventListener("click",()=>montrerPage(b.dataset.page));
+$("basculer-menu").addEventListener("click",()=>{
+  app.classList.toggle("replie");app.classList.toggle("ouvert");
+});
+
+/* ── sessions (API /api/sessions du serveur local) ─────────── */
+async function rafraichirSessions(){
+  try{
+    const j=await(await fetch("/api/sessions")).json();
+    const liste=j.sessions||[];
+    sessions.replaceChildren();
+    if(!liste.length){
+      const d=document.createElement("div");d.className="vide";d.textContent="Aucune session";
+      sessions.appendChild(d);return;
+    }
+    for(const s of liste){
+      const b=document.createElement("button");
+      b.className="session"+(s.actif?" actif":"");
+      b.textContent="#"+s.id+" · "+s.titre+" ("+s.messages+")";
+      b.title="Ouvrir la session "+s.id;
+      b.addEventListener("click",()=>ouvrirSession(s.id));
+      sessions.appendChild(b);
+    }
+  }catch(e){/* serveur occupé : on retentera au prochain cycle */}
+}
+async function ouvrirSession(id){
+  try{
+    const r=await fetch("/api/session/ouvrir",{method:"POST",
+      headers:{"Content-Type":"application/json"},body:JSON.stringify({id})});
+    const j=await r.json();
+    if(!j.ok){bulle("Session "+id+" introuvable.",false);return;}
+    const m=await(await fetch("/api/session/messages?id="+id)).json();
+    fil.replaceChildren();
+    for(const msg of (m.messages||[]))bulle(msg.texte,msg.role==="utilisateur");
+    bulle("Session #"+id+" rouverte — on continue.",false);
+    montrerPage("chat");
+    rafraichirSessions();
+  }catch(e){bulle("Impossible d'ouvrir la session.",false);}
+}
+rafraichirSessions();
+$("nouvelle-session").addEventListener("click",()=>{
+  fil.replaceChildren();
+  bulle("Nouvelle conversation. Que veux-tu faire ?",false);
+  montrerPage("chat");
+});
+$("supprimer-session").addEventListener("click",async()=>{
+  if(!confirm("Effacer la conversation affichée ?\n(L'historique réel reste dans les sessions du bureau.)"))return;
+  fil.replaceChildren();
+  bulle("Conversation effacée à l'écran. Pour supprimer définitivement une session, clique droit sur une session dans la fenêtre de bureau → Bibliothèque.",false);
+});
+
+/* ── micro (API /api/ecoute du serveur local) ─────────────────── */
+async function ecouterMicro(){
+  if(microBouton.classList.contains("ecoute"))return;
+  microBouton.classList.add("ecoute");
+  document.body.classList.add("ecoute");
+  try{
+    const r=await fetch("/api/ecoute",{method:"POST"});
+    const j=await r.json();
+    if(j.texte){saisie.value=j.texte;ajusterSaisie();envoyer();}
+    else if(j.erreur){bulle("(micro : "+j.erreur+")",false);}
+  }catch(e){bulle("(micro indisponible)",false);}
+  microBouton.classList.remove("ecoute");
+  document.body.classList.remove("ecoute");
+}
+microBouton.addEventListener("click",ecouterMicro);
+
+/* ── import ───────────────────────────────────────────────────── */
+importCourt.addEventListener("click",()=>{importInput.click();});
+importButton.addEventListener("click",()=>importInput.click());
+importInput.addEventListener("change",async()=>{
+  const fichiers=[...importInput.files];
+  if(!fichiers.length)return;
+  const corps=new FormData();
+  for(const f of fichiers)corps.append("fichier",f,f.name);
+  importButton.disabled=true;importCourt.disabled=true;
+  bulle("Import de "+fichiers.length+" fichier(s)…",false);
+  try{
+    const r=await fetch("/api/import",{method:"POST",body:corps});
+    const j=await r.json();
+    bulle((j.messages||[]).join("\n")||j.message||"Import terminé",false);
+    await rafraichirDocuments();
+  }catch(e){bulle("Import impossible.",false);}
+  finally{importButton.disabled=false;importCourt.disabled=false;importInput.value="";}
+});
+
+/* ── données périodiques ──────────────────────────────────────── */
+async function rafraichirEtat(){
+  try{
+    const j=await(await fetch("/api/etat")).json();
+    const pret=j.ollama;
+    etat.innerHTML="";
+    const point=document.createElement("b");
+    point.className=pret?"":"hors";
+    point.textContent=pret?"● prêt":"● Ollama éteint";
+    etat.append(point,document.createTextNode(" · "+j.modele+" · "+j.outils+" outils · "+j.heure));
+  }catch(e){etat.textContent="hors ligne";}
+}
+async function rafraichirProgression(){
+  try{
+    const p=await(await fetch("/api/progression")).json();
+    const n=Math.max(0,Math.min(100,Number(p.pourcent)||0));
+    barre.style.width=n+"%";
+    progres.textContent=(p.actif?"● ":"")+n+" % · "+(p.titre||"Aucune tâche")+(p.etape?" — "+p.etape:"");
+  }catch(e){}
+}
+async function rafraichirDocuments(){
+  try{
+    const j=await(await fetch("/api/documents")).json();
+    const ds=j.documents||[];
+    documents.replaceChildren();
+    if(!ds.length){const d=document.createElement("div");d.className="vide";d.textContent="Aucun document";documents.appendChild(d);return;}
+    for(const x of ds){
+      const row=document.createElement("div");row.className="document";
+      const a=document.createElement("a");a.href=x.url;a.download=x.nom;a.textContent=x.nom;
+      const s=document.createElement("span");s.className="petit";
+      s.textContent=(x.modifie||"")+" · "+Math.max(1,Math.round((x.taille||0)/1024))+" Ko";
+      row.append(a,s);documents.appendChild(row);
+    }
+  }catch(e){}
+}
+async function rafraichirSignaux(){
+  try{
+    const s=await(await fetch("/api/signaux")).json();
+    signaux.replaceChildren();
+    for(const [k,v] of [["Batterie",s.batterie],["Disque",s.disque],["Système",s.systeme],
+                        ["Réseau",s.reseau],["Erreurs JIBI",s.erreurs_jibi],["Documents",s.documents]]){
+      const line=document.createElement("div");
+      const b=document.createElement("strong");b.textContent=k+" : ";
+      line.append(b,document.createTextNode(nettoyer(v||"—")));
+      signaux.appendChild(line);
+    }
+  }catch(e){signaux.textContent="Signaux indisponibles";}
+}
+async function rafraichirAudit(){
+  try{
+    const j=await(await fetch("/api/audit")).json();
+    const ev=j.evenements||[];
+    audit.textContent=ev.length?ev.map(e=>{
+      const q=(e.quand||"");const d=(e.detail||e.action||e.outil||"");
+      return q+"  "+(typeof d==="string"?d:JSON.stringify(d)).slice(0,140);
+    }).join("\n"):"Aucun événement";
+  }catch(e){audit.textContent="Audit indisponible";}
+}
+bouton.addEventListener("click",()=>envoyer());
+saisie.addEventListener("input",ajusterSaisie);
+saisie.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();envoyer();}});
+window.addEventListener("resize",()=>{if(window.innerWidth>900){app.classList.remove("ouvert");app.classList.remove("replie");}});
+
+for(const r of RACCOURCIS){
+  const b=document.createElement("button");b.textContent=r;
+  b.addEventListener("click",()=>envoyer(r));
+  $("raccourcis").appendChild(b);
+}
+bulle("Salut ! Je suis prêt. Écris, clique sur le micro ou demande-moi une analyse.",false);
+montrerPage("chat");
 rafraichirEtat();rafraichirDocuments();rafraichirProgression();rafraichirSignaux();
-setInterval(rafraichirEtat,10000);setInterval(rafraichirDocuments,5000);setInterval(rafraichirProgression,1000);setInterval(rafraichirSignaux,30000);ajusterSaisie();saisie.focus();
+setInterval(rafraichirEtat,10000);
+setInterval(rafraichirDocuments,5000);
+setInterval(rafraichirProgression,1200);
+setInterval(rafraichirSignaux,30000);
+setInterval(rafraichirAudit,60000);
+setInterval(rafraichirSessions,20000);
+ajusterSaisie();saisie.focus();
 </script>
 </body>
 </html>

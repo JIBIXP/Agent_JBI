@@ -15,6 +15,7 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
+from jibi2 import config
 from outils import outil
 
 MAX_FICHIER = 25 * 1024 * 1024

@@ -71,6 +71,7 @@ def charger_integres() -> None:
         bureautique,
         calcul,
         chrome,
+        clavier,
         design,
         documents,
         fichiers,
@@ -156,6 +157,16 @@ DOMAINES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (r"amaran|godox|lumiere video|key ?light|aputure", ("controler_amaran",)),
     (r"souris|curseur|\bclique|defile|double[- ]?clic", (
         "deplacer_souris", "cliquer_souris", "defiler")),
+    (r"taper|ecris dans|écris dans|clavier|touche|raccourci|alt\+tab|ctrl\+s|win\+d|"
+     r"remplis|saisis|appuie", (
+        "taper_du_texte", "appuyer_touche", "raccourci_clavier",
+        "deplacer_souris", "cliquer_souris", "voir_ecran")),
+    (r"controle(?:r|le)? (?:mon|le) pc|prends? la main|pilote (?:mon|le) pc|"
+     r"commande (?:mon|le) pc", (
+        "voir_ecran", "deplacer_souris", "cliquer_souris", "defiler",
+        "taper_du_texte", "appuyer_touche", "raccourci_clavier",
+        "executer_commande", "ouvrir_application", "monter_volume",
+        "baisser_volume", "monter_luminosite", "baisser_luminosite")),
     (r"\bjeux?\b|pile ou face|mystere|pierre|feuille|ciseaux|lance un de",
      ("lancer_un_de", "pile_ou_face", "pierre_feuille_ciseaux", "nombre_mystere")),
     (r"panneau|tableau de bord", ("ouvrir_panneau",)),
@@ -196,10 +207,17 @@ DOMAINES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (r"geolocalisation|géolocalisation|position|ou je suis|ou suis[- ]?je|pres de|près de|restaurant|pharmacie|garage", (
         "localisation_approchee", "rechercher_pres")),
     (r"autonome|autonomie|am[ée]lior[ -]?toi|apprend|auto[- ]?apprend|"
-     r"ajout(?:e|er).*fonctionnalit|fais.*mise.*jour.*jibi|am[ée]lior.*jibi", (
-        "ameliorer_autonomement", "configurer_autonomie", "statut_autonomie",
-        "consulter_audit", "lister_erreurs", "analyser_code_projet",
-        "naviguer_autonome", "traduire")),
+     r"ajout(?:e|er).*fonctionnalit|fais.*mise.*jour.*jibi|am[ée]lior.*jibi|boucle continue|"
+     r"tourne en fond", (
+        "ameliorer_autonomement", "configurer_autonomie", "configurer_boucle_continue",
+        "statut_autonomie", "consulter_audit", "lister_erreurs", "analyser_code_projet",
+        "lire_progression", "naviguer_autonome", "traduire")),
+    (r"explore(?:r| le web| seul| autonome)?|navigue seul|va sur le web tout seul|"
+     r"surf(?:e|er)? (?:seul|autonome)|veille(?: technologique)?|nouvelles? du web|"
+     r"quoi de neuf", (
+        "explorer_autonome", "configurer_exploration", "bilan_exploration",
+        "naviguer_browser_use", "lire_site_browser", "rechercher_web",
+        "chercher_site", "statut_browser_use")),
     (r"\bcode\b|\btests?\b|verifie|amelior|propose|\boutil|erreur|\bbug\b|corrige", (
         "analyser_code_projet", "lancer_verification", "lire_code_outil",
         "lister_erreurs", "proposer_nouvel_outil", "tester_proposition",
@@ -335,6 +353,13 @@ try:
     from jibi2.autonomie import enregistrer_outil as enregistrer_outil_autonomie
 
     enregistrer_outil_autonomie()
+except Exception:
+    pass
+
+try:
+    from jibi2.exploration import enregistrer_outil as enregistrer_outil_exploration
+
+    enregistrer_outil_exploration()
 except Exception:
     pass
 

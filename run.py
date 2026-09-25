@@ -117,9 +117,10 @@ def principal() -> int:
     # Boucle continue (vérification périodique tant que JIBI est ouvert)
     from jibi2 import autonomie
     if config.valeur_bool("JIBI_AUTONOMIE_CONTINU"):
+        stop_autonomie = threading.Event()
         thread = threading.Thread(
             target=autonomie.boucle_continue,
-            args=(assistant,),
+            args=(assistant, stop_autonomie),
             daemon=True,
         )
         thread.start()

@@ -55,8 +55,17 @@ DEFAUTS = {
     # 0 = le noyau reste modifiable seulement après une confirmation explicite.
     "JIBI_AUTONOMIE_NOYAU": "0",
     # Cycle autonome facultatif, une fois par jour à l'heure indiquée.
+    # Mode SEUL : laisse JIBI_AUTONOMIE_HEURE vide et mets CONTINU=1 →
+    # JIBI travaille quand tu ne lui parles pas (JIBI_AUTONOMIE_INACTIVITE min).
     "JIBI_AUTONOMIE_ACTIVE": "0",
     "JIBI_AUTONOMIE_HEURE": "04:00",
+    "JIBI_AUTONOMIE_INACTIVITE": "20",    # minutes de silence avant un cycle
+    # Exploration web autonome (lecture seule) : mode SEUL par défaut.
+    "JIBI_EXPLORATION_ACTIVE": "0",
+    "JIBI_EXPLORATION_MODE": "seul",       # seul | programme
+    "JIBI_EXPLORATION_HEURE": "",          # vide = mode seul (recommandé)
+    "JIBI_EXPLORATION_INACTIVITE": "45",   # minutes de silence avant d'explorer
+    "JIBI_EXPLORATION_MAX_JOUR": "3",
     # Délai minimal entre deux activations d'outils pendant un cycle automatique.
     "JIBI_AUTONOMIE_DELAI": "21600",      # secondes (6 h)
     # Mode continu : JIBI vérifie périodiquement s'il y a une nouvelle tâche

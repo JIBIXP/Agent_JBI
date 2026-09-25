@@ -48,6 +48,8 @@ def _lire_etat() -> dict:
                     etat["objectif"] = contenu["objectif"]
                 if "dernier_cycle" in contenu:
                     etat["dernier_cycle"] = contenu["dernier_cycle"]
+                if "continu" in contenu:
+                    etat["continu"] = bool(contenu["continu"])
     etat["actif"] = etat.get("actif") is True or str(etat.get("actif", "")).lower() in ("1", "true", "oui", "on")
     try:
         etat["heure"] = _normaliser_heure(str(etat.get("heure", "04:00")))
@@ -97,6 +99,19 @@ def configurer(actif: bool, heure: str = "") -> str:
             "retour arrière.")
 
 
+def configurer_continu(actif: bool, intervalle: int = 1800) -> str:
+    """Active/désactive la boucle continue et fixe son intervalle (≥ 10 min)."""
+    etat = _lire_etat()
+    etat["continu"] = bool(actif)
+    etat["intervalle"] = max(600, int(intervalle))
+    _ecrire_etat(etat)
+    if etat["continu"]:
+        return (f"✅ Boucle continue activée : une vague d'erreurs réelles est "
+                f"traitée au maximum toutes les {etat['intervalle'] // 60} minutes, "
+                "et chaque vague n'est traitée qu'une fois.")
+    return "✅ Boucle continue désactivée."
+
+
 def _dernier_enregistrement() -> dict:
     if not JOURNAL.exists():
         return {}
@@ -118,7 +133,12 @@ def _noter(evenement: dict) -> None:
 
 
 def _erreurs_recentes(jours: int = 7) -> Counter:
-    """Compte les erreurs d'outils réelles, sans envoyer de commande au modèle."""
+    """Compte les erreurs d'outils RÉELLES des N derniers jours.
+
+    Sont exclues les erreurs de test (outil_qui_nexiste_pas, propositions
+    bac à sable, outil_auto…), sans quoi les tests polluent les objectifs
+    et l'auto-amélioration tourne en rond sur ses propres traces.
+    """
     limite = time.time() - max(1, jours) * 86400
     compteur: Counter = Counter()
     if ERREURS.exists():
@@ -127,15 +147,19 @@ def _erreurs_recentes(jours: int = 7) -> Counter:
                 entree = json.loads(ligne)
                 if not isinstance(entree, dict):
                     continue
+                nom = str(entree.get("outil", "")).strip()
+                if not nom:
+                    continue
+                # Le journal historique n'a pas d'epoch fiable : on tient
+                # compte de la date texte quand elle est parsable.
                 quand = str(entree.get("quand", ""))
-                # Le journal historique n'a pas d'epoch ; on garde les 500 dernières
-                # lignes pour éviter d'inventer une conversion de date fragile.
-                if len(compteur) < 500:
-                    nom = str(entree.get("outil", "")).strip()
-                    if nom:
-                        compteur[nom] += 1
-    # Les erreurs de test* sont conservées pour l'historique mais ne déclenchent
-    # pas un cycle autonome : elles ne décrivent pas l'usage réel de JIBI.
+                try:
+                    horodatage = time.mktime(time.strptime(quand[:19], "%Y-%m-%d %H:%M:%S"))
+                except ValueError:
+                    horodatage = None
+                if horodatage is not None and horodatage < limite:
+                    continue
+                compteur[nom] += 1
     for nom in list(compteur):
         if nom.startswith(("test_", "outil_qui_nexiste", "outil_auto")):
             del compteur[nom]
@@ -262,33 +286,79 @@ def programme_echeance() -> bool:
     return bool(etat.get("actif") and _maintenant() == etat.get("heure"))
 
 
+def _empreinte_erreurs() -> str:
+    """Empreinte stable du journal d'erreurs réel (nom, nombre, dernière date).
+
+    Sert à ne traiter un objectif autonome qu'une fois par « vague » d'erreurs :
+    si rien de nouveau n'est survenu depuis le dernier cycle, on ne relance pas.
+    """
+    compteur = _erreurs_recentes(jours=7)
+    if not compteur:
+        return ""
+    return json.dumps(compteur.most_common(), ensure_ascii=False, sort_keys=True)
+
+
 def _objectif_automatique() -> str:
-    """Retourne un court objectif à partir de la dernière erreur enregistrée,
-    ou la chaîne vide si aucune erreur n'est disponible."""
+    """Choisit un objectif à partir d'une erreur RÉELLE récente, ou vide.
+
+    Jamais la dernière ligne brute du journal : les tests y écrivent aussi
+    (outil_qui_nexiste_pas, propositions volontairement cassées…) et la
+    boucle continue tournait en rond sur ses propres traces.
+    """
+    compteur = _erreurs_recentes(jours=7)
+    if not compteur:
+        return ""
+    nom, nombre = compteur.most_common(1)[0]
+    return (f"Analyser et améliorer la fiabilité de l'outil « {nom} » "
+            f"({nombre} erreur(s) récente(s) d'usage réel)")
+
+
+def _inactivite_secondes() -> float:
+    """Secondes depuis le dernier message utilisateur (activite.json)."""
+    fichier = config.DOSSIER_JOURNAL / "activite.json"
     try:
-        lignes = ERREURS.read_text(encoding="utf-8", errors="replace").splitlines()
-        if not lignes:
-            return ""
-        for ligne in reversed(lignes):
-            ligne = ligne.strip()
-            if ligne:
-                return f"Analyser et corriger : {ligne[:120]}"
-    except Exception:
+        epoch = json.loads(fichier.read_text(encoding="utf-8")).get("epoch", 0)
+    except (OSError, json.JSONDecodeError, AttributeError):
+        return 10 * 3600
+    return max(0.0, time.time() - float(epoch))
+
+
+def noter_activite() -> None:
+    """Appelé par les interfaces à chaque message utilisateur."""
+    try:
+        fichier = config.DOSSIER_JOURNAL / "activite.json"
+        fichier.parent.mkdir(parents=True, exist_ok=True)
+        fichier.write_text(json.dumps({"epoch": time.time()}), encoding="utf-8")
+    except OSError:
         pass
-    return ""
 
 
-def boucle_continue(assistant) -> None:
-    """Boucle autonome continue tant que JIBI est actif et l'option est activée."""
-    continu = config.valeur_bool("JIBI_AUTONOMIE_CONTINU")
-    if not continu:
-        return
-    intervalle = config.entier("JIBI_AUTONOMIE_INTERVALLE", 1800)
-    while config.valeur_bool("JIBI_AUTONOMIE_CONTINU"):
+def boucle_continue(assistant, stop: threading.Event | None = None) -> None:
+    """Boucle autonome SEULE : JIBI travaille quand tu ne l'occupes pas.
+
+    - Un cycle part seulement si tu n'as pas parlé depuis JIBI_AUTONOMIE_
+      INACTIVITE minutes (défaut 20) — jamais pendant que tu discutes.
+    - Pas de nouvel objectif tant que le journal d'erreurs réel n'a pas
+      changé (sinon mêmes erreurs → mêmes cycles en boucle).
+    - Interval plancher de 10 minutes entre deux vérifications.
+    - L'arrêt passe par l'Event ``stop`` ou la clé « continu ».
+    """
+    stop = stop or threading.Event()
+    intervalle = max(600, config.entier("JIBI_AUTONOMIE_INTERVALLE", 1800))
+    inactivite = max(5, config.entier("JIBI_AUTONOMIE_INACTIVITE", 20))
+    empreinte_traitee = ""
+    while not stop.is_set():
+        etat = _lire_etat()
+        continu = etat.get("continu", config.valeur_bool("JIBI_AUTONOMIE_CONTINU"))
+        if not continu:
+            return
         objectif = _objectif_automatique()
-        if objectif:
+        if objectif and _inactivite_secondes() >= inactivite * 60:
             executer_cycle(assistant, objectif, force=False)
-        time.sleep(intervalle)
+            # Après le cycle, mémorise l'état du journal : un cycle qui échoue
+            # n'écrira PAS de nouvelles erreurs d'usage réel, donc pas de boucle.
+            empreinte_traitee = _empreinte_erreurs()
+        stop.wait(intervalle)
 
 
 def deja_fait_aujourdhui() -> bool:
@@ -335,6 +405,19 @@ def enregistrer_outil() -> None:
            exemple='{"outil": "configurer_autonomie", "parametres": {"actif": true, "heure": "04:00"}}')
     def configurer_autonomie(actif: bool, heure: str = "") -> str:
         return configurer(actif, heure)
+
+    @outil("configurer_boucle_continue",
+           "Active/désactive la boucle continue d'auto-amélioration (mode « tourne "
+           "en fond tant que JIBI est ouvert »). Chaque vague d'erreurs réelles n'est "
+           "traitée qu'UNE fois ; intervalle minimum 10 minutes.",
+           {"actif": {"type": "bool", "obligatoire": True,
+                      "description": "true pour activer, false pour désactiver"},
+            "intervalle": {"type": "int", "obligatoire": False,
+                          "description": "secondes entre deux vérifications (minimum 600, défaut 1800)"}},
+           categorie="amelioration", risque="faible",
+           exemple='{"outil": "configurer_boucle_continue", "parametres": {"actif": true, "intervalle": 1800}}')
+    def configurer_boucle_continue(actif: bool, intervalle: int = 1800) -> str:
+        return configurer_continu(actif, intervalle)
 
     @outil("ameliorer_autonomement",
            "Lance maintenant une amélioration autonome : recherche web, analyse, "

@@ -24,13 +24,13 @@ _CLES_PANNEAU = ("fond", "carte", "accent", "texte")
 
 DEFAUT: dict = {
     "orbe": {
-        "repos": ["#12315e", "#2a62b8", "#7db2ff"],
-        "ecoute": ["#0c4a56", "#1294ad", "#5ce4f7"],
-        "reflexion": ["#3b2470", "#6d47d8", "#b9a1ff"],
-        "parole": ["#0d4d33", "#17a06a", "#67e8b0"],
+        "repos": ["#0d3a2e", "#2fd6a3", "#7cf0cc"],
+        "ecoute": ["#0a3d4a", "#1e8fb8", "#5cc8e8"],
+        "reflexion": ["#4a3614", "#d19a3f", "#ffc46b"],
+        "parole": ["#0d4d33", "#1fb87e", "#7cf0cc"],
     },
-    "panneau": {"fond": "#0d0b14", "carte": "#171322",
-                "accent": "#a78bfa", "texte": "#eae6f7"},
+    "panneau": {"fond": "#0c0f0e", "carte": "#141a18",
+                "accent": "#2fd6a3", "texte": "#eef2f0"},
 }
 
 
@@ -67,7 +67,7 @@ def style_panneau() -> str:
     except (OSError, json.JSONDecodeError):
         return ""
     correspondance = {"fond": "--fond", "carte": "--carte",
-                      "accent": "--violet", "texte": "--texte"}
+                      "accent": "--accent", "texte": "--texte"}
     regles = [f"{correspondance[k]}:{v}" for k, v in ecrit.items()
               if k in correspondance and _HEX.match(str(v))]
     return "<style>:root{" + ";".join(regles) + "}</style>" if regles else ""

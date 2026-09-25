@@ -132,6 +132,35 @@ def importer_buffer(nom: str, donnees: bytes, type: str = "auto") -> str:
     return f"Import réussi : {destination.name} est disponible dans donnees/fichiers/imports."
 
 
+def _fichier_importe(nom_source: str) -> Path | None:
+    """Retrouve le fichier VRAIMENT importé à l'instant.
+
+    En cas de collision de nom, _copier renomme « rapport_1758… » : chercher
+    le nom d'origine trouvait l'ANCIEN fichier (analyse du mauvais document).
+    On prend donc le plus récent parmi : nom exact, ou même racine du nom.
+    """
+    import_dir = config.DOSSIER_FICHIERS / "imports"
+    if not import_dir.is_dir():
+        return None
+    tige = Path(nom_source).stem.lower()
+    candidates: list[tuple[float, Path]] = []
+    seuil = time.time() - 60          # import des 60 dernières secondes seulement
+    for fichier in import_dir.glob("*"):
+        if not fichier.is_file():
+            continue
+        try:
+            quand = fichier.stat().st_mtime
+        except OSError:
+            continue
+        if quand < seuil:
+            continue
+        if fichier.name.lower() == nom_source.lower() or fichier.stem.lower().startswith(tige):
+            candidates.append((quand, fichier))
+    if not candidates:
+        return None
+    return max(candidates, key=lambda paire: paire[0])[1]
+
+
 @outil("importer_fichier",
        "Importe dans JIBI un document ou une image choisi par l'utilisateur. "
        "Le fichier est copié dans donnees/fichiers/imports, analysé automatiquement, "
@@ -145,17 +174,13 @@ def importer_fichier(chemin: str, type: str = "auto") -> str:
     if resultat.startswith(("Import refusé", "Chemin de fichier", "Fichier introuvable",
                            "Type non pris", "Impossible de lire", "Import impossible")):
         raise ValueError(resultat)
-    # Analyse automatique après import
+    # Analyse automatique du fichier réellement importé (gère le renommage)
     try:
         from outils.analyse import analyser_fichier
-        chemin_source = Path(chemin).name
-        import_dir = config.DOSSIER_FICHIERS / "imports"
-        # Cherche le fichier dans le dossier d'import
-        fichiers = list(import_dir.glob(chemin_source))
-        if fichiers:
-            chemin_importe = str(fichiers[0])
-            analyse = analyser_fichier(chemin_importe)
+        importe = _fichier_importe(Path(chemin).name)
+        if importe is not None:
+            analyse = analyser_fichier(str(importe))
             return resultat + "\n\n📄 Analyse du fichier :\n" + analyse
-    except Exception as e:
+    except Exception:
         pass
     return resultat + "\n\n💡 Utilise 'analyser_fichier' pour une analyse détaillée."

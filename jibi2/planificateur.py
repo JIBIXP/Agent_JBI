@@ -106,6 +106,22 @@ def _cycle() -> None:
     except Exception as e:
         print(f"(signaux : {e})")
 
+    # Exploration web autonome : mode programmé (heure fixe) OU mode SEUL
+    # (inactivité + quota journalier) — c'est exploration.echeance() qui
+    # décide selon la config. Lecture seule garantie.
+    try:
+        from jibi2 import exploration
+        if exploration.echeance():
+            with _verrou:
+                if _dernier_jour.get("__exploration__") == jour:
+                    return
+                _dernier_jour["__exploration__"] = jour
+            resultat = exploration.lancer_si_programme()
+            if resultat:
+                _annoncer(f"Exploration web autonome :\n{resultat}")
+    except Exception as e:
+        print(f"(exploration : {e})")
+
 
 def _boucle(stop: threading.Event) -> None:
     while not stop.is_set():

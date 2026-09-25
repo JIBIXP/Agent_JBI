@@ -244,16 +244,33 @@ def _rechercher_bing(requete: str, nombre: int) -> str | None:
 
 
 @outil("rechercher_web",
-       "Cherche sur le web (Tavily si configuré, sinon DuckDuckGo) et renvoie "
-       "titres, liens, extraits et, si disponibles, les images associées.",
+       "Cherche sur le web et renvoie titres, liens, extraits et, si disponibles, "
+       "les images associées. Cascade de moteurs : Tavily (si clé), Bing, "
+       "DuckDuckGo, Wikipédia — le premier qui répond gagne.",
        {"requete": {"type": "str", "obligatoire": True, "description": "ce qu'il faut chercher"},
         "nombre": {"type": "int", "obligatoire": False, "description": "nombre de résultats (défaut 5)"}},
        categorie="web", exemple='{"outil": "rechercher_web", "parametres": {"requete": "météo Rennes"}}')
 def rechercher_web(requete: str, nombre: int = 5) -> str:
-    resultat = _rechercher_tavily(requete, nombre)
-    if resultat is not None:
-        return resultat
-    return _rechercher_duckduckgo(requete, nombre)
+    """Cascade : Tavily → Bing → DuckDuckGo → Wikipédia.
+
+    Avant : Tavily cassée ou DDG bloqué = « Aucun résultat » définitif.
+    Maintenant chaque moteur raté passe la main au suivant.
+    """
+    echecs: list[str] = []
+    for nom_moteur, chercher in (("tavily", _rechercher_tavily),
+                                 ("bing", _rechercher_bing),
+                                 ("duckduckgo", _rechercher_duckduckgo),
+                                 ("wikipedia", _rechercher_wikipedia)):
+        try:
+            resultat = chercher(requete, nombre)
+        except Exception:
+            resultat = None
+        if resultat:
+            return resultat
+        echecs.append(nom_moteur)
+    return ("Aucun résultat : les moteurs " + ", ".join(echecs)
+            + " n'ont rien renvoyé (connexion ou format de page ?). "
+              "Réessaie avec d'autres mots, ou demande une recherche Chrome.")
 
 
 @outil("chercher_web_local",
@@ -277,6 +294,11 @@ def chercher_web_local(requete: str, nombre: int = 5) -> str:
         parties.append("Résultats Wikipédia :\n" + wikipedia)
     if parties:
         return "\n\n".join(parties)
+    # Bing et Wikipédia muets : même cascade élargie que rechercher_web.
+    ddg = _rechercher_duckduckgo(requete, limite)
+    if ddg and "Aucun résultat" not in ddg and "échoué" not in ddg:
+        return "Résultats DuckDuckGo :\n" + ddg
+    return "Aucun résultat trouvé pour cette recherche (connexion ou moteurs bloqués)."
     return _rechercher_duckduckgo(requete, limite)
 
 

@@ -26,7 +26,23 @@ def _racine() -> Path:
 
 def _chemin_espace(nom: str) -> Path:
     racine = _racine().resolve()
-    chemin = (racine / nom).resolve()
+    brut = str(nom or "").strip().strip('"')
+    # Le modèle écrit souvent un chemin absolu ou « donnees/fichiers/… » alors
+    # que l'outil attend un nom RELATIF : on ramène gentiment au lieu de
+    # rejeter (46 erreurs enregistrées venaient de là).
+    for marqueur in ("donnees/fichiers/", "donnees\\fichiers\\"):
+        if marqueur in brut:
+            brut = brut.split(marqueur, 1)[1]
+    chemin_propose = Path(brut)
+    if chemin_propose.is_absolute():
+        try:
+            chemin = chemin_propose.resolve()
+        except OSError:
+            raise ValueError("Chemin invalide.")
+        if chemin.is_relative_to(racine):
+            return chemin
+        raise ValueError("Le nom doit rester dans l'espace de travail (donnees/fichiers).")
+    chemin = (racine / chemin_propose).resolve()
     if not chemin.is_relative_to(racine):
         raise ValueError("Le nom doit rester dans l'espace de travail (donnees/fichiers).")
     return chemin

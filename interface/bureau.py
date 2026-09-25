@@ -256,6 +256,18 @@ def _icone_barre(canvas: tk.Canvas, nom: str, x: float, y: float,
         points = _points_arrondis(x - r * .32, y - r * .32, x + r * .32, y + r * .32,
                                   r * .10, 4)
         canvas.create_polygon(points, fill=couleur, outline="")
+    elif nom == "verrou":
+        # Cadenas : anse en arc + corps rectangulaire arrondi.
+        # NB : create_arc n'accepte pas capstyle (crash Tk), on n'en met pas.
+        canvas.create_arc(x - r * .30, y - r * .62, x + r * .30, y + r * .02,
+                          start=0, extent=180, style="arc", outline=couleur,
+                          width=trait)
+        points = _points_arrondis(x - r * .42, y - r * .08, x + r * .42, y + r * .60,
+                                  r * .12, 5)
+        canvas.create_polygon(points, fill="", outline=couleur, width=trait,
+                              smooth=True)
+        canvas.create_oval(x - r * .07, y + r * .16, x + r * .07, y + r * .30,
+                           fill=couleur, outline="")
 
 
 def _texte_sans_boucle(texte: str) -> str:
@@ -1113,6 +1125,7 @@ class FenetreJIBI:
             pass
         self.annonces = annonces
         self.flux_actif = cfg.valeur_bool("JIBI_FLUX")
+        self._ecoute_en_cours = False   # évite deux écoutes simultanées
 
         # Doit précéder la création de toute fenêtre Tk pour éviter le
         # redimensionnement et le flou Windows à fort DPI.
@@ -1299,7 +1312,7 @@ class FenetreJIBI:
         self._maj_fichier_bouton()
         # Bouton configuration déplacement
         self.deplacement_bouton = self._barre_saisie.ajouter_bouton(
-            "trombone", "Confirmation déplacement",
+            "check", "Confirmation déplacement",
             self.configurer_deplacement)
         self._maj_deplacement_bouton()
         self.en_dictee = False
@@ -1364,7 +1377,12 @@ class FenetreJIBI:
         entete = tk.Frame(self.sidebar, bg=theme.PANNEAU, height=58)
         entete.pack(fill="x", padx=14, pady=(10, 5))
         entete.pack_propagate(False)
-        tk.Label(entete, text="JIBI", bg=theme.PANNEAU, fg=theme.TEXTE_PUR,
+        # Marque : pastille jade + nom, alignée avec l'orbe de l'accueil.
+        pastille = tk.Canvas(entete, width=18, height=18, bg=theme.PANNEAU,
+                             highlightthickness=0)
+        pastille.pack(side="left")
+        pastille.create_oval(1, 1, 17, 17, fill=theme.ACCENT, outline="")
+        tk.Label(entete, text="  JIBI", bg=theme.PANNEAU, fg=theme.TEXTE_PUR,
                  font=(theme.POLICE, theme.TAILLE_TITRE, "bold")).pack(side="left")
         self._collapse_button = tk.Button(entete, text="Réduire", command=self._basculer_sidebar,
                                           bg=theme.PANNEAU, fg=theme.GRIS,
@@ -1613,13 +1631,17 @@ class FenetreJIBI:
         self.fichier_bouton.set_texte("[FICHIERS] Gestionnaire")
 
     def configurer_deplacement(self) -> None:
-        """Basculer la confirmation deplacement."""
+        """Bascule la confirmation des déplacements de fichiers (0 ↔ 1)."""
         try:
-            from outils.fichiers import configurer_deplacement
-            actif = True  # Toggle: on veut désactiver la confirmation
-            texte = configurer_deplacement(actif)
+            from jibi2 import config as _config
+            nouvelle = _config.basculer_deplacement()
             self._maj_deplacement_bouton()
-            self.ajouter_chat("jibi", texte)
+            if nouvelle == "0":
+                self.ajouter_chat("jibi",
+                                  "[AUTO] Déplacement/copie sans confirmation activé.")
+            else:
+                self.ajouter_chat("jibi",
+                                  "[CONFIRMATION] Chaque déplacement/copie demandera ton accord.")
         except Exception as e:
             self.ajouter_chat("jibi",
                               "Erreur configuration déplacement : " + str(e))
@@ -1629,9 +1651,9 @@ class FenetreJIBI:
             return
         try:
             from jibi2 import config as _c
-            auto = not _c.valeur_bool("CONFIRMER_DEPLACEMENT")
+            confirmation = _c.valeur_bool("CONFIRMER_DEPLACEMENT")
             self.deplacement_bouton.set_texte(
-                "[CONFIRMATION] Déplacement" if not auto
+                "[CONFIRMATION] Déplacement" if confirmation
                 else "[AUTO] Déplacement sans confirmation")
         except Exception:
             pass
@@ -1640,6 +1662,7 @@ class FenetreJIBI:
         if not self.var_voix.get():
             self._arreter_voix()
         self._maj_voix_bouton()
+        self._maj_bouton_envoi()
 
     def _arreter_voix(self) -> None:
         lecteur = self._lecteur_courant
@@ -1739,7 +1762,7 @@ class FenetreJIBI:
             nom = "sessions"
         for page in self._bib_pages.values():
             page.pack_forget()
-        self._bib_pages[nom].pack(fill="both", expand=True, padx=16, pady=(8, 16))
+        self._bib_pages[nom].pack(fill="both", expand=True, padx=16, pady=(0, 16))
         self._bib_onglet = nom
         for nom_bouton, bouton in getattr(self, "_bib_nav_buttons", {}).items():
             actif = nom_bouton == nom
@@ -2007,18 +2030,39 @@ class FenetreJIBI:
         except Exception as e:  # noqa: BLE001
             messagebox.showerror("Document impossible", str(e)[:220])
 
+    def _bib_bouton(self, parent, texte: str, commande, principal: bool = False,
+                    danger: bool = False) -> tk.Button:
+        """Bouton harmonisé de la bibliothèque (un seul style partout)."""
+        if principal:
+            couleurs = (theme.ACCENT, theme.FOND, theme.ACCENT_CLAIR)
+        elif danger:
+            couleurs = (theme.PANNEAU_CLAIR, theme.ROUGE, theme.ROUGE)
+        else:
+            couleurs = (theme.PANNEAU_CLAIR, theme.TEXTE, theme.ACCENT)
+        return tk.Button(parent, text=texte, command=commande,
+                         bg=couleurs[0], fg=couleurs[1],
+                         activebackground=couleurs[2],
+                         activeforeground=theme.FOND, relief="flat",
+                         cursor="hand2", bd=0,
+                         font=(theme.POLICE, theme.TAILLE_BASE), padx=12, pady=6)
+
+    def _bib_entete_page(self, parent, titre: str) -> tk.Frame:
+        """Bandeau titre + Actualiser, commun aux deux pages."""
+        barre = tk.Frame(parent, bg=theme.FOND)
+        barre.pack(fill="x", pady=(0, 10))
+        tk.Label(barre, text=titre, bg=theme.FOND, fg=theme.TEXTE_PUR,
+                 font=(theme.POLICE, theme.TAILLE_TITRE, "bold")).pack(side="left")
+        return barre
+
     def _construire_bibliotheque_sessions(self, parent: tk.Frame) -> None:
         page = tk.Frame(parent, bg=theme.FOND)
-        barre = tk.Frame(page, bg=theme.FOND)
-        barre.pack(fill="x", pady=(0, 8))
-        tk.Label(barre, text="Sessions passées", bg=theme.FOND, fg=theme.TEXTE_PUR,
-                 font=(theme.POLICE, theme.TAILLE_TITRE, "bold")).pack(side="left")
+        barre = self._bib_entete_page(page, "Sessions passées")
         tk.Button(barre, text="Actualiser", command=self._bib_rafraichir_sessions,
                   bg=theme.PANNEAU, fg=theme.TEXTE, relief="flat", cursor="hand2", bd=0,
                   font=(theme.POLICE, theme.TAILLE_PETIT), padx=10, pady=5).pack(side="right")
         corps = tk.Frame(page, bg=theme.FOND)
         corps.pack(fill="both", expand=True)
-        gauche = tk.Frame(corps, bg=theme.PANNEAU, width=330)
+        gauche = tk.Frame(corps, bg=theme.PANNEAU, width=340)
         gauche.pack(side="left", fill="y")
         gauche.pack_propagate(False)
         self._bib_session_list = tk.Listbox(gauche, bg=theme.PANNEAU, fg=theme.TEXTE,
@@ -2042,32 +2086,23 @@ class FenetreJIBI:
                                        font=(theme.POLICE, theme.TAILLE_BASE, "bold"))
         actions = tk.Frame(droite, bg=theme.PANNEAU)
         actions.pack(fill="x", pady=(8, 0))
-        tk.Button(actions, text="Ouvrir la session", command=self._bib_ouvrir_session,
-                  bg=theme.ACCENT, fg=theme.FOND, activebackground=theme.ACCENT_CLAIR,
-                  relief="flat", cursor="hand2", bd=0,
-                  font=(theme.POLICE, theme.TAILLE_BASE), padx=12, pady=6).pack(side="left")
-        tk.Button(actions, text="Exporter la session", command=self._bib_exporter_session,
-                  bg=theme.PANNEAU_CLAIR, fg=theme.TEXTE, activebackground=theme.ACCENT,
-                  activeforeground=theme.FOND, relief="flat", cursor="hand2", bd=0,
-                  font=(theme.POLICE, theme.TAILLE_BASE), padx=12, pady=6).pack(side="left", padx=(8, 0))
-        tk.Button(actions, text="Supprimer la session", command=self._bib_supprimer_session,
-                  bg=theme.PANNEAU_CLAIR, fg=theme.ROUGE, activebackground=theme.ROUGE,
-                  activeforeground=theme.FOND, relief="flat", cursor="hand2", bd=0,
-                  font=(theme.POLICE, theme.TAILLE_BASE), padx=12, pady=6).pack(side="left", padx=(8, 0))
+        self._bib_bouton(actions, "Ouvrir la session", self._bib_ouvrir_session,
+                         principal=True).pack(side="left")
+        self._bib_bouton(actions, "Exporter", self._bib_exporter_session).pack(
+            side="left", padx=(8, 0))
+        self._bib_bouton(actions, "Supprimer", self._bib_supprimer_session,
+                         danger=True).pack(side="left", padx=(8, 0))
         self._bib_pages["sessions"] = page
 
     def _construire_bibliotheque_documents(self, parent: tk.Frame) -> None:
         page = tk.Frame(parent, bg=theme.FOND)
-        barre = tk.Frame(page, bg=theme.FOND)
-        barre.pack(fill="x", pady=(0, 8))
-        tk.Label(barre, text="Tous les documents", bg=theme.FOND, fg=theme.TEXTE_PUR,
-                 font=(theme.POLICE, theme.TAILLE_TITRE, "bold")).pack(side="left")
+        barre = self._bib_entete_page(page, "Tous les documents")
         self._bib_doc_search = tk.StringVar()
-        recherche = tk.Entry(barre, textvariable=self._bib_doc_search, width=24,
+        recherche = tk.Entry(barre, textvariable=self._bib_doc_search, width=26,
                              bg=theme.PANNEAU, fg=theme.TEXTE, relief="flat",
                              insertbackground=theme.ACCENT_CLAIR,
                              font=(theme.POLICE, theme.TAILLE_BASE))
-        recherche.pack(side="right", padx=8)
+        recherche.pack(side="right", padx=(8, 0))
         recherche.bind("<KeyRelease>", self._bib_filtrer_documents)
         tk.Button(barre, text="Actualiser", command=self._bib_rafraichir_documents,
                   bg=theme.PANNEAU, fg=theme.TEXTE, relief="flat", cursor="hand2", bd=0,
@@ -2078,43 +2113,92 @@ class FenetreJIBI:
                                        activestyle="none")
         self._bib_doc_list.pack(fill="both", expand=True)
         self._bib_doc_list.bind("<Double-Button-1>", lambda _e: self._bib_ouvrir_document())
+        self._bib_doc_list.bind("<Button-3>", lambda e: self._popup_document(e))
         actions = tk.Frame(page, bg=theme.FOND)
         actions.pack(fill="x", pady=(10, 0))
-        tk.Button(actions, text="Importer document / image", command=self._importer_fichiers,
-                  bg=theme.ACCENT, fg=theme.FOND, activebackground=theme.ACCENT_CLAIR,
-                  relief="flat", cursor="hand2", bd=0,
-                  font=(theme.POLICE, theme.TAILLE_BASE), padx=12, pady=6).pack(side="left")
-        tk.Button(actions, text="Ouvrir / télécharger", command=self._bib_ouvrir_document,
-                  bg=theme.ACCENT, fg=theme.FOND, activebackground=theme.ACCENT_CLAIR,
-                  relief="flat", cursor="hand2", bd=0,
-                  font=(theme.POLICE, theme.TAILLE_BASE), padx=12, pady=6).pack(side="left")
-        tk.Button(actions, text="Ouvrir le dossier", command=self._ouvrir_dossier_documents,
-                  bg=theme.PANNEAU_CLAIR, fg=theme.TEXTE, activebackground=theme.ACCENT,
-                  activeforeground=theme.FOND, relief="flat", cursor="hand2", bd=0,
-                  font=(theme.POLICE, theme.TAILLE_BASE), padx=12, pady=6).pack(side="left", padx=(8, 0))
+        self._bib_bouton(actions, "Importer document / image", self._importer_fichiers,
+                         principal=True).pack(side="left")
+        self._bib_bouton(actions, "Ouvrir", self._bib_ouvrir_document).pack(
+            side="left", padx=(8, 0))
+        self._bib_bouton(actions, "Ouvrir le dossier", self._ouvrir_dossier_documents).pack(
+            side="left", padx=(8, 0))
+        self._bib_bouton(actions, "Supprimer (corbeille)", self._supprimer_document_selectionne,
+                         danger=True).pack(side="left", padx=(8, 0))
         self._bib_pages["documents"] = page
+
+    def _supprimer_document_selectionne(self) -> None:
+        """Déplace le document sélectionné vers la corbeille JIBI (récupérable)."""
+        selection = self._bib_doc_list.curselection()
+        if not selection or selection[0] >= len(getattr(self, "_bib_doc_visibles", [])):
+            return
+        chemin = self._bib_doc_visibles[selection[0]]
+        if not messagebox.askyesno("Supprimer le document",
+                                   f"Déplacer « {chemin.name} » vers la corbeille JIBI ?",
+                                   parent=self.root):
+            return
+        try:
+            corbeille = Path(__import__("jibi2.config", fromlist=["DOSSIER_CORBEILLE"]).DOSSIER_CORBEILLE)
+            corbeille.mkdir(parents=True, exist_ok=True)
+            destination = corbeille / f"{chemin.name}.{int(time.time())}"
+            import shutil
+            shutil.move(str(chemin), str(destination))
+            self._bib_rafraichir_documents()
+            self.ajouter_chat("jibi", f"« {chemin.name} » déplacé vers la corbeille (récupérable).")
+        except Exception as e:  # noqa: BLE001
+            messagebox.showerror("Suppression impossible", str(e)[:220], parent=self.root)
+
+    def _popup_document(self, event) -> str:
+        """Menu contextuel de la liste des documents."""
+        widget = getattr(self, "_bib_doc_list", None)
+        if widget is None:
+            return "break"
+        try:
+            if event.y < 0 or event.y > widget.winfo_height():
+                return "break"
+            index = int(widget.nearest(event.y))
+            if index < 0 or index >= len(getattr(self, "_bib_doc_visibles", [])):
+                return "break"
+            widget.selection_clear(0, "end")
+            widget.selection_set(index)
+            widget.activate(index)
+        except (tk.TclError, TypeError, ValueError):
+            return "break"
+        menu = tk.Menu(self.root, tearoff=False, bg=theme.PANNEAU,
+                       fg=theme.TEXTE, activebackground=theme.ACCENT,
+                       activeforeground=theme.FOND, font=(theme.POLICE, theme.TAILLE_BASE))
+        menu.add_command(label="Ouvrir", command=self._bib_ouvrir_document)
+        menu.add_command(label="Supprimer (corbeille)",
+                         command=self._supprimer_document_selectionne)
+        try:
+            menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            menu.grab_release()
+        return "break"
 
     def ouvrir_bibliotheque(self, onglet: str = "sessions") -> None:
         """Affiche la bibliothèque dans la zone principale, sans popup."""
         if not self._bib_pages:
             entete = tk.Frame(self.page_bibliotheque, bg=theme.FOND)
-            entete.pack(fill="x", padx=18, pady=(8, 4))
-            tk.Label(entete, text="Bibliothèque JIBI", bg=theme.FOND, fg=theme.TEXTE_PUR,
+            entete.pack(fill="x", padx=18, pady=(10, 2))
+            tk.Label(entete, text="Bibliothèque", bg=theme.FOND, fg=theme.TEXTE_PUR,
                      font=(theme.POLICE, theme.TAILLE_TITRE, "bold")).pack(side="left")
             self._bib_stats = tk.Label(entete, text="", bg=theme.FOND, fg=theme.GRIS,
                                         font=(theme.POLICE, theme.TAILLE_PETIT))
             self._bib_stats.pack(side="right")
+            # Onglets segmentés : une seule rangée, l'onglet actif en jade.
             navigation = tk.Frame(self.page_bibliotheque, bg=theme.FOND)
-            navigation.pack(fill="x", padx=18, pady=(0, 4))
+            navigation.pack(fill="x", padx=18, pady=(2, 8))
+            cadre_onglets = tk.Frame(navigation, bg=theme.PANNEAU)
+            cadre_onglets.pack(side="left")
             self._bib_nav_buttons = {}
-            for nom, libelle in (("sessions", "Sessions"), ("documents", "Documents")):
+            for nom, libelle in (("sessions", "  Sessions  "), ("documents", "  Documents  ")):
                 bouton = tk.Button(
-                    navigation, text=libelle,
+                    cadre_onglets, text=libelle,
                     command=lambda n=nom: self._bib_afficher_onglet(n),
                     bg=theme.PANNEAU, fg=theme.GRIS, activebackground=theme.ACCENT,
                     activeforeground=theme.FOND, relief="flat", cursor="hand2", bd=0,
-                    font=(theme.POLICE, theme.TAILLE_BASE), padx=16, pady=7)
-                bouton.pack(side="left", padx=(0, 6))
+                    font=(theme.POLICE, theme.TAILLE_BASE, "bold"), padx=14, pady=7)
+                bouton.pack(side="left")
                 self._bib_nav_buttons[nom] = bouton
             contenu = tk.Frame(self.page_bibliotheque, bg=theme.FOND)
             contenu.pack(fill="both", expand=True)
@@ -2188,6 +2272,22 @@ class FenetreJIBI:
         self.orbe.create_oval(centre_x - rayon, centre_y - rayon,
                               centre_x + rayon, centre_y + rayon,
                               fill=coeur, width=0, tags="tout")
+        # Ondes concentriques : visibilité du niveau sonore de la voix.
+        # - parole  : 3 ondes régulières (JIBI est en train de parler)
+        # - ecoute  : 2 ondes lentes (il capte ta voix)
+        if self.etat_orbe in ("parole", "ecoute"):
+            nombre = 3 if self.etat_orbe == "parole" else 2
+            vitesse = 2.2 if self.etat_orbe == "parole" else 1.1
+            for i in range(nombre):
+                phase = (t * vitesse + i / nombre) % 1.0
+                rayon_onde = rayon * (1.05 + phase * 0.85)
+                # L'onde s'estompe en s'éloignant : Tk n'a que 3 trames,
+                # on choisit la plus proche de l'opacité voulue.
+                stipple = "gray75" if phase < 0.33 else ("gray50" if phase < 0.66 else "gray25")
+                self.orbe.create_oval(
+                    centre_x - rayon_onde, centre_y - rayon_onde,
+                    centre_x + rayon_onde, centre_y + rayon_onde,
+                    outline=coeur, width=2, stipple=stipple, tags="onde")
         self._actualiser_progression()
         self._actualiser_badge_documents()
         if time.time() < self._badge_flash:
@@ -2239,7 +2339,7 @@ class FenetreJIBI:
 
     def _flux_ajouter(self, morceau: str) -> None:
         propre = _texte_sans_boucle(_normaliser_texte(morceau))
-        if not propre or propre == self._flux_dernier:
+        if not propre:
             return
         self._flux_dernier = propre
         self.chat.config(state="normal")
@@ -2286,6 +2386,17 @@ class FenetreJIBI:
         self._jeton_travail += 1
         jeton = self._jeton_travail
         self.occupe = True
+        # Signale l'activité : les modes autonomes « seuls » attendent le silence.
+        try:
+            from jibi2 import exploration
+            exploration.noter_activite()
+        except Exception:
+            pass
+        try:
+            from jibi2 import autonomie as _autonomie
+            _autonomie.noter_activite()
+        except Exception:
+            pass
         self._etat("reflexion")
         self.envoyer_bouton.set_etat("disabled")
         self.stop_bouton.set_etat("normal")
@@ -2348,8 +2459,9 @@ class FenetreJIBI:
 
     def micro(self) -> None:
         """Écoute une phrase via la boule, sans bouton Micro dédié."""
-        if self.occupe:
+        if self.occupe or self._ecoute_en_cours:
             return
+        self._ecoute_en_cours = True
         self._etat("ecoute")
 
         def travail() -> None:
@@ -2498,6 +2610,7 @@ class FenetreJIBI:
             self._etat("repos")
 
     def _traite_micro(self, entendu: str) -> None:
+        self._ecoute_en_cours = False
         if entendu:
             self.ajouter_chat("toi", entendu)
             self._lancer_travail(entendu)

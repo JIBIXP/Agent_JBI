@@ -87,7 +87,12 @@ def demarrer(assistant=None, port: int | None = None) -> int:
         except ValueError:
             port = 8756
     _assurer_assistant()
-    SERVEUR = ThreadingHTTPServer(("127.0.0.1", port), _Gestionnaire)
+    try:
+        SERVEUR = ThreadingHTTPServer(("127.0.0.1", port), _Gestionnaire)
+    except OSError:
+        # Port déjà pris (JIBI lancé deux fois, autre application…) :
+        # on demande un port libre plutôt que de planter le démarrage.
+        SERVEUR = ThreadingHTTPServer(("127.0.0.1", 0), _Gestionnaire)
     threading.Thread(target=SERVEUR.serve_forever, daemon=True).start()
     return SERVEUR.server_address[1]
 
@@ -234,6 +239,42 @@ class _Gestionnaire(BaseHTTPRequestHandler):
         elif route == "/api/progression":
             from jibi2 import progression
             self._json(progression.lire())
+        elif route == "/api/sessions":
+            a = _ASSISTANT
+            sessions: list[dict] = []
+            if a is not None:
+                import contextlib
+                with contextlib.suppress(Exception):
+                    courant = a.memoire.session_courante() or 0
+                    for sid, titre, nombre in a.memoire.lister_sessions(30):
+                        sessions.append({"id": int(sid), "titre": str(titre)[:60],
+                                         "messages": int(nombre),
+                                         "actif": int(sid) == int(courant)})
+            self._json({"sessions": sessions})
+        elif route == "/api/session/messages":
+            a = _ASSISTANT
+            try:
+                sid = int(urllib.parse.urlsplit(self.path).query.split("=", 1)[1])
+            except (IndexError, ValueError):
+                self._json({"erreur": "identifiant de session invalide"}, 400)
+                return
+            messages: list[dict] = []
+            if a is not None:
+                import contextlib
+                with contextlib.suppress(Exception):
+                    for role, contenu in a.memoire.messages_de(sid)[-80:]:
+                        messages.append({"role": role, "texte": _normaliser_texte(contenu)})
+            self._json({"session": sid, "messages": messages})
+        elif route == "/api/session/ouvrir" and self.command == "POST":
+            a = _assurer_assistant()
+            try:
+                taille = min(int(self.headers.get("Content-Length", 0) or 0), 1000)
+                sid = int(json.loads(self.rfile.read(taille) or b"{}").get("id"))
+            except (ValueError, json.JSONDecodeError):
+                self._json({"erreur": "identifiant invalide"}, 400)
+                return
+            message = a.reprendre(sid)
+            self._json({"ok": "introuvable" not in message, "message": message})
         elif route == "/api/documents":
             self._json({"documents": _documents()})
         elif route == "/api/audit":
@@ -299,6 +340,34 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                     return
                 self._json({"texte": "", "erreur": str(e)[:200]}, 503)
             return
+        if route == "/api/parler":
+            # Fait parler JIBI depuis le panneau (synthèse dans le même process).
+            try:
+                taille = min(int(self.headers.get("Content-Length", 0) or 0), 8000)
+                texte = str(json.loads(self.rfile.read(taille) or b"{}").get("texte", "")).strip()
+            except (ValueError, json.JSONDecodeError):
+                self._json({"ok": False, "erreur": "requête invalide"}, 400)
+                return
+            if not texte:
+                self._json({"ok": False, "erreur": "texte vide"}, 400)
+                return
+            def _dire() -> None:
+                import contextlib
+                from audio import parole
+                with contextlib.suppress(Exception):
+                    parole.arreter()
+                    parole.parler(_texte_sans_boucle(_normaliser_texte(texte))[:1500])
+            threading.Thread(target=_dire, daemon=True).start()
+            self._json({"ok": True})
+            return
+        if route == "/api/voix/etat":
+            try:
+                from audio import parole
+                self._json({"disponible": parole.voix_disponible() is not None,
+                            "voix": parole.voix_actuelle()})
+            except Exception:
+                self._json({"disponible": False, "voix": "aucune"})
+            return
         if route != "/api/message":
             self._json({"erreur": "introuvable"}, 404)
             return
@@ -312,6 +381,17 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                 self._json({"reponse": "Dis-moi quelque chose d'abord.", "actions": []})
                 return
             with _VERROU:                      # un échange à la fois
+                # Signale l'activité : les modes autonomes « seuls » attendent le silence.
+                try:
+                    from jibi2 import exploration
+                    exploration.noter_activite()
+                except Exception:
+                    pass
+                try:
+                    from jibi2 import autonomie as _autonomie
+                    _autonomie.noter_activite()
+                except Exception:
+                    pass
                 resultat = _assurer_assistant().repondre(texte)
             self._json({"reponse": _normaliser_texte(_texte_sans_boucle(resultat.get("reponse", ""))),
                         "actions": resultat.get("actions", [])})
