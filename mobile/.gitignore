@@ -1,0 +1,29 @@
+# Flutter/Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Android
+android/.gradle/
+android/local.properties
+android/key.properties
+*.jks
+*.keystore
+
+# iOS (pour plus tard)
+ios/Pods/
+ios/.symlinks/
+
+# Divers
+*.log
+
+# Générés localement (flutter create / pub get) — jamais dans Git
+ios/Flutter/
+ios/Runner/GeneratedPluginRegistrant.*

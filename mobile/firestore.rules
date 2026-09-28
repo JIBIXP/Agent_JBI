@@ -1,0 +1,52 @@
+rules_version = '2';
+
+// Règles Firestore pour le mode défi social FocusGuard.
+// À coller dans Firebase Console → Firestore Database → Rules.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMember(code) {
+      return isSignedIn()
+        && request.auth.uid in get(/databases/$(database)/documents/groups/$(code)).data.members;
+    }
+
+    match /groups/{code} {
+      // Lecture : membres du groupe uniquement.
+      allow read: if isSignedIn() && request.auth.uid in resource.data.members;
+
+      // Création : n'importe quel utilisateur connecté, il s'ajoute comme membre.
+      allow create: if isSignedIn()
+        && request.resource.data.members.keys().hasOnly([request.auth.uid])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 40;
+
+      // Modification : membres, mais on ne touche pas au nom/owner arbitrairement.
+      allow update: if isSignedIn()
+        && request.auth.uid in resource.data.members
+        && request.resource.data.name == resource.data.name
+        && request.resource.data.owner == resource.data.owner;
+
+      allow delete: if false; // suppression via console uniquement
+
+      match /scores/{uid} {
+        // Classement lisible par les membres.
+        allow read: if isMember(code);
+
+        // Chacun n'écrit que SA ligne, pseudo court, minutes plausibles (0..10080 = 7 jours).
+        allow write: if isSignedIn()
+          && request.auth.uid == uid
+          && request.resource.data.name is string
+          && request.resource.data.name.size() >= 1
+          && request.resource.data.name.size() <= 25
+          && request.resource.data.minutesWeek is int
+          && request.resource.data.minutesWeek >= 0
+          && request.resource.data.minutesWeek <= 10080;
+      }
+    }
+  }
+}

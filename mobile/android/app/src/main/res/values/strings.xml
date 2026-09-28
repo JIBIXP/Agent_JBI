@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">FocusGuard</string>
+    <string name="accessibility_description">
+        FocusGuard utilise cette autorisation uniquement pour savoir quand une app bloquée
+        s\'ouvre, afin d\'afficher l\'écran de blocage. Aucun contenu n\'est lu ni enregistré.
+    </string>
+    <string name="block_title">C\'est le moment de focus</string>
+    <string name="block_message">Cette app est bloquée pendant ta session.</string>
+    <string name="block_back">Retour</string>
+</resources>

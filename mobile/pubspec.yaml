@@ -1,0 +1,55 @@
+name: focusguard
+description: "FocusGuard — bloque tes réseaux sociaux, gagne ta concentration."
+publish_to: "none"
+version: 0.1.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # --- État & stockage ---
+  provider: ^6.1.2
+  shared_preferences: ^2.2.3
+
+  # --- UI ---
+  google_fonts: ^6.2.2
+  fl_chart: ^0.68.0
+
+  # --- Notifications locales ---
+  flutter_local_notifications: ^17.2.2
+
+  # --- Monétisation ---
+  purchases_flutter: ^6.30.0
+
+  # --- Défi social (Firebase) ---
+  # Activés une fois `flutterfire configure` exécuté (voir FIREBASE-SETUP.md).
+  firebase_core: ^3.6.0
+  firebase_auth: ^5.3.1
+  cloud_firestore: ^5.4.4
+  google_sign_in: ^6.2.1
+
+  # --- Analytics / erreurs (optionnels, câblés mais silencieux sans clés) ---
+  # sentry_flutter: ^8.x — ajouter plus tard si souhaité
+
+  # --- Icônes ---
+  flutter_launcher_icons: ^0.13.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+
+flutter_launcher_icons:
+  android: true
+  # ios: true — à activer en Phase 2 quand le dossier ios/ existera (build Mac)
+  ios: false
+  image_path: "assets/icon.png"
+  adaptive_icon_background: "#150920"
+  adaptive_icon_foreground: "assets/icon_adaptive_foreground.png"
