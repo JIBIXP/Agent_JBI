@@ -4,3 +4,6 @@ donnees/
 modeles/voix/*.onnx
 modeles/voix/*.onnx.json
 .env
+
+.freebuff/
+mobile_backup/

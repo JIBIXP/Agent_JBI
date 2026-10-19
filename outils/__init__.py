@@ -192,10 +192,11 @@ DOMAINES: tuple[tuple[str, tuple[str, ...]], ...] = (
     (r"\bcours\b|\bexposé\b|\bexpose\b|leçon|lecon|chapitre|fiche pédagogique", (
         "chercher_google_headless", "chercher_web_local", "lire_page_web",
         "creer_cours", "creer_document", "creer_word")),
-    (r"analyse|analyser|fichier pdf|fichier word|fichier excel|\bcsv\b|\bjson\b|document|classeur|tableur|tableau|excel|présentation|presentation|powerpoint|pptx|theme|thème|motif|spec", (
+    (r"analyse|analyser|fichier pdf|fichier word|fichier excel|\bcsv\b|\bjson\b|document|classeur|tableur|tableau|excel|présentation|presentation|powerpoint|pptx|theme|thème|motif|spec|recherche proactive|lire_recherche|lancer_recherche", (
         "analyser_fichier", "analyser_dossier", "analyser_documents",
         "analyser_excel", "chercher_fichiers_pc", "lire_fichier", "lire_fichier_pc",
-        "importer_fichier", "creer_document", "exemple_document", "creer_excel")),
+        "importer_fichier", "creer_document", "exemple_document", "creer_excel",
+        "lire_recherche_proactive", "lancer_recherche_proactive")),
     (r"dessin|dessiner|schéma|schema|diagramme|emoji|émojis|emotifs?|emoticons?", (
         "creer_document", "creer_word", "creer_pdf")),
     (r"image|photo|vignette|visuel|illustration", (

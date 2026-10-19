@@ -78,6 +78,33 @@ def _traiter_slash(commande: str, argument: str, texte: str, *, assistant, memoi
             print(f"  #{sid} — {titre} ({n} message{'s' if n > 1 else ''})")
         return _Signal.CONTINUER, voix_on, texte
 
+    if commande == "/fuseau":
+        from jibi2 import config as _config
+        pays = argument.strip().lower()
+        fuseaux_de_base = {
+            "france": "Europe/Paris",
+            "chine": "Asia/Shanghai",
+            "tchad": "Africa/Ndjamena",
+            "etats-unis": "America/New_York",
+            "usa": "America/New_York",
+            "royaume-uni": "Europe/London",
+            "uk": "Europe/London",
+            "allemagne": "Europe/Berlin",
+            "japon": "Asia/Tokyo",
+            "indes": "Asia/Kolkata",
+            "brésil": "America/Sao_Paulo",
+            "canada": "America/Toronto",
+            "australie": "Australia/Sydney",
+        }
+        if pays in fuseaux_de_base:
+            fuseau = fuseaux_de_base[pays]
+            print(f"   🌍 {pays.title()} : fuseau {fuseau}")
+            print(f"   (UTC {fuseau.split('/')[-1].replace('America/', '-').replace('Europe/', '+').replace('Asia/', '+')} )")
+        else:
+            print(f"   Pays inconnu : {argument}")
+            print("   Utilise : /fuseau <pays> (france, chine, tchad, etats-unis, uk, etc.)")
+        return _Signal.CONTINUER, voix_on, texte
+
     if commande == "/notes":
         for n, t, h in memoire.lister_notes(15):
             print(f"  n°{n} — {t}  ({h})")
@@ -139,6 +166,48 @@ def _traiter_slash(commande: str, argument: str, texte: str, *, assistant, memoi
             print(autonomie.executer_cycle(assistant, argument.strip(), force=True))
         except Exception as e:
             print(f"   Cycle impossible : {e}")
+        return _Signal.CONTINUER, voix_on, texte
+
+    if commande == "/mcp":
+        argument = argument.strip()
+        if not argument:
+            print("   Usage : /mcp executer <nom_outil> {\"clé\": \"valeur\"}")
+            print("   Exemple : /mcp executer baisser_luminosite")
+            print("   Outils disponibles : /outils ou http://127.0.0.1:8080")
+            return _Signal.CONTINUER, voix_on, texte
+        # Parser "executer <outil> {params}"
+        parts = argument.split(" ", 1)
+        if len(parts) < 2 or parts[0] != "executer":
+            print("   Format : /mcp executer <nom_outil> {\"clé\": \"valeur\"}")
+            return _Signal.CONTINUER, voix_on, texte
+        outil_nom = parts[1].strip()
+        params_str = ""
+        if " {" in argument:
+            idx = argument.index(" {")
+            outil_nom = outil_nom[:idx-1].strip()
+            params_str = argument[idx:]
+        try:
+            import json
+            if params_str.startswith("{"):
+                params = json.loads(params_str)
+            else:
+                params = {}
+            from mcp_server import MCPServer
+            server = MCPServer()
+            result = server.call_tool(outil_nom, params)
+            import json as _json
+            try:
+                data = _json.loads(result)
+                if "error" in data:
+                    print(f"   ❌ Erreur : {data['error']}")
+                elif "result" in data:
+                    print(f"   ✅ Résultat : {data['result'][:300]}")
+                else:
+                    print(f"   📄 Réponse : {result[:300]}")
+            except _json.JSONDecodeError:
+                print(f"   📄 Réponse brute : {result[:300]}")
+        except Exception as e:
+            print(f"   ❌ Impossible d'appeler l'outil : {e}")
         return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/valider":
@@ -320,6 +389,12 @@ def lancer(assistant, garde, memoire, voix_on: bool = False, mains_libres: bool 
             break
         if not texte:
             continue
+        # Signaler l'activité pour que l'autonomie ne tourne pas pendant les conversations
+        try:
+            from jibi2.autonomie import noter_activite as _noter_act
+            _noter_act()
+        except Exception:
+            pass
 
         if texte.startswith("/"):
             commande, _, argument = texte.partition(" ")

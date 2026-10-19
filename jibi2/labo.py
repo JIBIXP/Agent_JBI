@@ -316,7 +316,7 @@ def verifier_code_projet() -> str:
     lignes_total = 0
     for chemin in sorted(fichiers):
         try:
-            code = chemin.read_text(encoding="utf-8", errors="replace")
+            code = chemin.read_text(encoding="utf-8-sig", errors="replace")
             lignes_total += len(code.splitlines())
             compile(code, str(chemin), "exec")
         except SyntaxError as e:

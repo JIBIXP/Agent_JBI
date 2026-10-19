@@ -245,3 +245,63 @@ def analyser_dossier(chemin: str = "", profondeur: int = 2, limite: int = 500) -
             f"{fichier.name} ({taille / 1024 / 1024:.1f} Mo)"
             for taille, fichier in sorted(tailles, reverse=True)[:5]))
     return "\n".join(lignes)
+
+
+@outil("lire_recherche_proactive",
+       "Lit la dernière recherche proactive effectuée par JIBI en arrière-plan. "
+       "Retourne le sujet, la date et le résumé des résultats trouvés.",
+       {},
+       categorie="information", risque="faible",
+       exemple='{"outil": "lire_recherche_proactive", "parametres": {}}')
+def lire_recherche_proactive() -> str:
+    """Lit le fichier de recherche proactive sauvegardé."""
+    fichier = config.DOSSIER_JOURNAL / "recherche_proactive.json"
+    if not fichier.is_file():
+        return "Aucune recherche proactive effectuée pour le moment."
+    try:
+        donnees = json.loads(fichier.read_text(encoding="utf-8"))
+        sujet = donnees.get("sujet", "inconnu")
+        quand = donnees.get("quand", "inconnu")
+        resultat = donnees.get("resultat", "")
+        sources = donnees.get("sources_brutes", "")
+        ligne = (f"📚 Dernière recherche proactive :\n"
+                 f"• Sujet : {sujet}\n"
+                 f"• Quand : {quand}\n\n"
+                 f"📄 Résultat :\n{resultat}")
+        if sources:
+            ligne += f"\n\n🔗 Sources :\n{sources[:500]}"
+        return ligne
+    except (OSError, json.JSONDecodeError) as e:
+        return f"Impossible de lire la recherche : {e}"
+
+
+@outil("lancer_recherche_proactive",
+       "Lance une recherche web proactive en arrière-plan sur un sujet donné. "
+       "Les résultats sont sauvegardés et consultables avec lire_recherche_proactive.",
+       {"sujet": {"type": "str", "obligatoire": True,
+                   "description": "sujet de recherche (ex: sciences et espace)"}},
+       categorie="information", risque="faible",
+       exemple='{"outil": "lancer_recherche_proactive", "parametres": {"sujet": "sciences et espace"}}')
+def lancer_recherche_proactive(sujet: str) -> str:
+    """Lance une recherche web proactive et sauvegarde les résultats."""
+    if not (sujet or "").strip():
+        return "Indique un sujet de recherche."
+    import time as _time
+    try:
+        from outils.web import chercher_web_local
+        resultats = chercher_web_local(sujet, 5)
+        if not resultats or "Aucun résultat" in resultats:
+            return f"🔍 Aucun résultat trouvé pour : {sujet}"
+        # Sauvegarder les résultats
+        fichier = config.DOSSIER_JOURNAL / "recherche_proactive.json"
+        fichier.parent.mkdir(parents=True, exist_ok=True)
+        fichier.write_text(json.dumps({
+            "sujet": sujet,
+            "quand": _time.strftime("%Y-%m-%d %H:%M:%S"),
+            "resultat": "",
+            "sources_brutes": resultats[:1000]
+        }, ensure_ascii=False), encoding="utf-8")
+        return (f"🔍 Recherche proactive lancée sur : {sujet}\n"
+                f"Résultats sauvegardés. Utilise 'lire_recherche_proactive' pour les consulter.")
+    except Exception as e:
+        return f"🔍 La recherche a échoué : {str(e)[:120]}"

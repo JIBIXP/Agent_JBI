@@ -205,6 +205,56 @@ def _prompt(objectif: str, sources_web: list) -> str:
     )
 
 
+def _executer_recherche_proactive(objectif: str) -> str:
+    """Effectue une recherche proactive et sauvegarde les résultats."""
+    try:
+        sujet = objectif.replace("Recherche proactive :", "").replace("Recherche proactive:", "").strip()
+        progression.demarrer("Recherche proactive", f"Sujet : {sujet}")
+        progression.mettre(20, "Recherche web en arrière-plan")
+        from outils.web import chercher_web_local
+        resultats = chercher_web_local(sujet, 5)
+        if not resultats or "Aucun résultat" in resultats:
+            progression.terminer("Aucune source trouvée", succes=False)
+            return f"🔍 Recherche proactive terminée. Aucune source trouvée pour : {sujet}"
+        progression.mettre(50, "Analyse des résultats par l'IA")
+        # Résumer les résultats avec l'IA
+        prompt = (
+            f"Recherche proactive de JIBI. Sujet : <<<{sujet}>>>\n\n"
+            "Voici les résultats de recherche. Analyse-les et présente un résumé clair :\n"
+            "• Quoi de nouveau ?\n"
+            "• Les points clés (3-5 bullet points)\n"
+            "• Source pour chaque information\n"
+            "• Si possible, une observation ou conclusion utile.\n\n"
+            f"Résultats :\n{resultats}\n\n"
+            "Réponds en français, de manière structurée et concise."
+        )
+        client = getattr(assistant, "client", None)
+        if config.valeur_bool("JIBI_AUTONOMIE_LOCAL") and hasattr(client, "contexte_local"):
+            with client.contexte_local():
+                texte = assistant.repondre(prompt, max_etapes=6).get("reponse", "")
+        else:
+            texte = assistant.repondre(prompt, max_etapes=6).get("reponse", "")
+        texte = str(texte)[:2000]
+        # Sauvegarder les résultats pour consultation ultérieure
+        from jibi2 import config as _config
+        fichier = _config.DOSSIER_JOURNAL / "recherche_proactive.json"
+        try:
+            fichier.parent.mkdir(parents=True, exist_ok=True)
+            fichier.write_text(json.dumps({
+                "sujet": sujet,
+                "quand": time.strftime("%Y-%m-%d %H:%M:%S"),
+                "resultat": texte,
+                "sources_brutes": resultats[:500]
+            }, ensure_ascii=False), encoding="utf-8")
+        except OSError:
+            pass
+        progression.terminer("Recherche proactive terminée", succes=True)
+        return f"🔍 Recherche proactive : {sujet}\n\n{texte}"
+    except Exception as e:
+        progression.terminer(f"Recherche échouée : {str(e)[:80]}", succes=False)
+        return f"🔍 La recherche proactive a échoué : {str(e)[:120]}"
+
+
 def executer_cycle(assistant, objectif: str = "", force: bool = False) -> str:
     """Lance un cycle. ``force`` est réservé à une demande explicite."""
     if getattr(_DANS_CYCLE, "active", False):
@@ -226,6 +276,9 @@ def executer_cycle(assistant, objectif: str = "", force: bool = False) -> str:
                     "quand_epoch": time.time(), "objectif": "", "modifie": False,
                     "raison": "aucune erreur réelle récente"})
             return "Aucune erreur récente : JIBI garde son code stable."
+        # Recherche proactive : JIBI cherche et présente des infos
+        if cible.startswith("Recherche proactive :") or cible.startswith("Recherche proactive:"):
+            return _executer_recherche_proactive(cible)
         progression.mettre(20, "Recherche de sources publiques")
         sources_web = sources.collecter(cible)
         if not sources_web:
@@ -304,13 +357,58 @@ def _objectif_automatique() -> str:
     Jamais la dernière ligne brute du journal : les tests y écrivent aussi
     (outil_qui_nexiste_pas, propositions volontairement cassées…) et la
     boucle continue tournait en rond sur ses propres traces.
+
+    Si aucune erreur, fait une recherche proactive seulement si l'utilisateur
+    est inactif depuis au moins JIBI_AUTONOMIE_INACTIVITE minutes (défaut 20).
     """
     compteur = _erreurs_recentes(jours=7)
-    if not compteur:
+    if compteur:
+        nom, nombre = compteur.most_common(1)[0]
+        return (f"Analyser et améliorer la fiabilité de l'outil « {nom} » "
+                f"({nombre} erreur(s) récente(s) d'usage réel)")
+
+    # NE PAS faire de recherche proactive si l'utilisateur vient de parler
+    from jibi2.autonomie import _inactivite_secondes
+    if _inactivite_secondes() < 20 * 60:  # moins de 20 min que l'utilisateur ait parlé
         return ""
-    nom, nombre = compteur.most_common(1)[0]
-    return (f"Analyser et améliorer la fiabilité de l'outil « {nom} » "
-            f"({nombre} erreur(s) récente(s) d'usage réel)")
+
+    # Recherche proactive toutes les 6 heures si pas d'erreurs et utilisateur inactif
+    import time as _time
+    from jibi2 import config as _config
+    fichier = _config.DOSSIER_JOURNAL / "proactif.json"
+    try:
+        etat = json.loads(fichier.read_text(encoding="utf-8"))
+        derniere = etat.get("derniere_heure", 0)
+        intervalle = etat.get("intervalle_heures", 6)
+    except (OSError, json.JSONDecodeError, AttributeError):
+        intervalle = 6
+
+    heure_actuelle = _time.time()
+    if heure_actuelle - derniere < intervalle * 3600:
+        return ""
+
+    # Sujets de recherche proactive
+    sujets = [
+        "l'actualité des sciences et de l'espace",
+        "les nouvelles technologies et l'intelligence artificielle",
+        "les avancées médicales récentes",
+        "l'actualité de la programmation et du développement",
+    ]
+    sujet = sujets[int(heure_actuelle) % len(sujets)]
+
+    # Mettre à jour le timestamp
+    try:
+        fichier.parent.mkdir(parents=True, exist_ok=True)
+        fichier.write_text(
+            json.dumps({"derniere_heure": heure_actuelle,
+                        "intervalle_heures": intervalle,
+                        "sujet": sujet}, ensure_ascii=False),
+            encoding="utf-8"
+        )
+    except OSError:
+        pass
+
+    return f"Recherche proactive : {sujet}"
 
 
 def _inactivite_secondes() -> float:
