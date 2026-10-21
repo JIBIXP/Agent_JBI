@@ -1,0 +1,60 @@
+# CI de JIBI 2 — dépôt public, exécution dans GitHub Actions uniquement.
+# Aucun secret n'est requis et aucun n'est fourni.
+# Une seule source de vérité : tests/verification.py (la suite hors-ligne du
+# projet), précédée de deux filets : compilation intégrale et lint ciblé.
+#
+# Le lint ne garde que les règles qui attrapent des erreurs réelles
+# (F821 : nom inconnu, F811 : redéfinition, F822 : import fantôme) ;
+# les 84 avertissements stylistiques préexistants restent hors de la CI.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    runs-on: windows-latest        # cible : le PC de l'utilisateur est Windows
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    # 3.13 signalé mais non bloquant : certaines dépendances optionnelles
+    # n'y sont pas encore assises ;
+    continue-on-error: ${{ matrix.python-version == '3.13' }}
+    env:
+      PYTHONIOENCODING: "utf-8"
+      PYTHONUTF8: "1"
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v4
+
+      - name: Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Dépendances
+        run: pip install -r requirements.txt ruff
+
+      - name: Compilation intégrale (erreurs de syntaxe)
+        run: python -m compileall -q outils jibi2 interface tests docteur.py run.py mcp_server.py
+
+      - name: Lint ciblé (F821, F811, F822)
+        run: ruff check . --select F821,F811,F822
+
+      - name: Suite de vérification hors-ligne
+        run: python tests/verification.py
+
+      - name: Aucun secret dans le dépôt (longueur de .env)
+        shell: pwsh
+        run: |
+          if (Test-Path .env) { Write-Error ".env présent : il ne doit PAS être commité" }
+          if (-not (Test-Path .gitignore)) { Write-Error ".gitignore manquant" }
