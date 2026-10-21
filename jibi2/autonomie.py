@@ -205,7 +205,7 @@ def _prompt(objectif: str, sources_web: list) -> str:
     )
 
 
-def _executer_recherche_proactive(objectif: str) -> str:
+def _executer_recherche_proactive(assistant, objectif: str) -> str:
     """Effectue une recherche proactive et sauvegarde les résultats."""
     try:
         sujet = objectif.replace("Recherche proactive :", "").replace("Recherche proactive:", "").strip()
@@ -278,7 +278,7 @@ def executer_cycle(assistant, objectif: str = "", force: bool = False) -> str:
             return "Aucune erreur récente : JIBI garde son code stable."
         # Recherche proactive : JIBI cherche et présente des infos
         if cible.startswith("Recherche proactive :") or cible.startswith("Recherche proactive:"):
-            return _executer_recherche_proactive(cible)
+            return _executer_recherche_proactive(assistant, cible)
         progression.mettre(20, "Recherche de sources publiques")
         sources_web = sources.collecter(cible)
         if not sources_web:

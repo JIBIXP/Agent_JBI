@@ -318,10 +318,9 @@ def gestionnaire_fichiers(action: str = "lister") -> str:
        exemple='{"outil": "configurer_deplacement", "parametres": {"actif": true}}')
 def configurer_deplacement(actif: bool) -> str:
     """Active/désactive la confirmation pour les déplacements."""
-    import config as _config
-    ancien = _config.valeur_bool("CONFIRMER_DEPLACEMENT")
+    ancien = config.valeur_bool("CONFIRMER_DEPLACEMENT")
     nouvelle = "0" if actif else "1"
-    env_path = _config.FICHIER_ENV
+    env_path = config.FICHIER_ENV
     if env_path.exists():
         contenu = env_path.read_text(encoding="utf-8", errors="replace")
         lignes = contenu.splitlines()
@@ -337,7 +336,7 @@ def configurer_deplacement(actif: bool) -> str:
             nouvelles.append(f"CONFIRMER_DEPLACEMENT={nouvelle}")
         env_path.write_text("\n".join(nouvelles) + "\n",
                               encoding="utf-8")
-    _config._cache = None
+    config._cache = None
     if actif:
         return ("Confirmation DÉSACTIVÉE pour les déplacements. "
                 "Les fichiers seront déplacés/copiés sans demander d'autorisation.")

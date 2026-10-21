@@ -116,7 +116,8 @@ def _resume(chemin: Path) -> str:
         except csv.Error as e:
             details.append(f"CSV à vérifier : {e}")
     if chemin.suffix.lower() in (".py", ".js", ".ts", ".html", ".css"):
-        details.append(f"Fonctions/méthodes : {len(re.findall(r'\b(def|function)\s+\w+', texte))}")
+        nb_fonctions = len(re.findall(r'\b(def|function)\s+\w+', texte))
+        details.append(f"Fonctions/méthodes : {nb_fonctions}")
     if frequences:
         details.append("Mots fréquents : " + ", ".join(f"{mot} ({nombre})" for mot, nombre in frequences))
     details.append("SHA-256 : " + hashlib.sha256(chemin.read_bytes()).hexdigest())

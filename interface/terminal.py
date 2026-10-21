@@ -284,10 +284,10 @@ def _traiter_slash(commande: str, argument: str, texte: str, *, assistant, memoi
         return _Signal.CONTINUER, voix_on, texte
 
     if commande == "/basculer_deplacement":
-        import config as _config
-        ancien = _config.valeur_bool("CONFIRMER_DEPLACEMENT")
+        from jibi2 import config as _config
         nouvelle = _config.basculer_deplacement()
-        self._maj_deplacement_bouton()
+        # L'interface fenêtre met sa touche à jour via son propre service ;
+        # en console, l'affichage suivant suffit.
         if nouvelle == "0":
             print("   [AUTO] Deplacement AUTOMATIQUE — plus de confirmation demandee.")
         else:

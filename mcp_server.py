@@ -133,7 +133,7 @@ async def main():
                 self.end_headers()
                 self.wfile.write(json.dumps(response).encode())
 
-            def do_Get(self):
+            def do_GET(self):
                 if self.path == "/":
                     tools = server.get_tools()
                     self.send_response(200)
