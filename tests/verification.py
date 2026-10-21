@@ -26,6 +26,11 @@ os.environ["JIBI_GEOLOCATION"] = "1"
 from jibi2 import config, evolution, llm, memoire
 
 config.preparer_dossiers()
+
+# Les tests n'ecrivent jamais dans le vrai CHANGELOG du projet :
+# le journal des evolutions est redirige vers un fichier temporaire.
+_dossier_changelog = tempfile.mkdtemp(prefix="jibi_changelog_")
+evolution.CHANGELOG = Path(_dossier_changelog) / "CHANGELOG.md"
 from jibi2.assistant import (Assistant, _demande_cours, _demande_dessin,
                              _demande_tableau, _extraire_json)
 from jibi2.securite import Garde
@@ -370,7 +375,7 @@ retour = evolution.valider("ajoute_deux")
 verif("validation après test OK", "activé" in retour and "Test bac à sable" in retour, retour)
 r = executer("ajoute_deux", {"nombre": 5}, Garde(lambda n, d: False))
 verif("outil validé fonctionne", r["ok"] and "7" in r["texte"], r["texte"])
-changelog = (config.RACINE / "CHANGELOG.md")
+changelog = evolution.CHANGELOG
 verif("CHANGELOG tenu à jour", changelog.exists() and "ajoute_deux" in changelog.read_text(encoding="utf-8"))
 perso_aj = Path(__file__).resolve().parent.parent / "outils" / "perso" / "ajoute_deux.py"
 perso_aj.unlink(missing_ok=True)
