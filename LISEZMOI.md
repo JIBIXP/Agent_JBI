@@ -158,8 +158,30 @@ Dans la console :
    installe le modèle officiel « hey jarvis » ; pour un vrai « jibi », entraîne
    un modèle avec la recette openWakeWord (~30 min, Colab) et dépose le .onnx
    dans modeles/wake/ — JIBI le chargera tout seul.
-2. Niveaux de risque N1/N2/N3 par outil (aujourd'hui : faible/moyen/élevé).
+2. ~~Niveaux de risque N1/N2/N3 par outil~~ — **fait** : voir
+   « Permissions N1/N2/N3 » ci-dessous.
 3. La boule réagit à la voix (visualisation du niveau sonore en direct).
+
+## Permissions N1/N2/N3 (jibi2/securite.py)
+
+Chaque outil est étiqueté faible / moyen / élevé, traduit en niveau :
+
+| Niveau | Qui ? | Défaut |
+|---|---|---|
+| N1 | lectures sûres (heure, calcul, dé, batterie…) | toujours autorisé, jamais demandé |
+| N2 | écritures confinées (ecrire_fichier, workflows, documents…) | toujours autorisé (réglable en « demander ») |
+| N3 | actions à risque (commande système, fichier PC, noyau…) | demande une confirmation humaine |
+
+Trois politiques par niveau dans le .env : `JIBI_AUTORISATION_N1/N2/N3 =
+toujours | demander | jamais` (valeur inconnue → « demander » : jamais
+fail ouvert).
+
+**Le verrou principal** : les outils ``_N3`` (`OUTILS_N3_VERROUILLE` —
+eteindre_pc, executer_commande, modifier_noyau, restaurer_noyau,
+installer_mise_a_jour) refusent « toujours » par construction. Même avec
+CONFIRMER_RISQUES=0 ou N3=toujours dans le .env, ils retombent sur la
+demande : ce n'est pas un réglage, c'est le code qui l'impose. À faire
+une fois, jamais « plus rien ne me demandera ».
 
 ## Assistance Chrome & lumière amaran (ADD 23)
 - **Compte Google / ChromeJIBI** : double-clique `CHROME_JIBI.bat`. Il ouvre

@@ -59,8 +59,11 @@ def _etat_securite() -> dict:
                    "is_relative_to" in inspect.getsource(_fichiers._chemin_espace))
             verrou("suppression = corbeille (récupérable)",
                    "corbeille" in inspect.getsource(_fichiers.supprimer_fichier))
-            verrou("risque élevé exige une confirmation humaine",
-                   "CONFIRMER_RISQUES" in inspect.getsource(Garde.autoriser))
+            from jibi2 import securite as _securite
+            _source_secu = inspect.getsource(_securite)
+            verrou("N1/N2/N3 : « toujours » refusé par construction pour N3",
+                   "OUTILS_N3_VERROUILLE" in _source_secu
+                   and "CONFIRMER_RISQUES" in _source_secu)
         except OSError:
             verrou("le code n'expose plus ses protections", False)
         verrou("moteur d'outils = la Garde (outils.executer)", callable(_executer))

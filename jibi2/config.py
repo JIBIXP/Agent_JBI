@@ -92,6 +92,10 @@ DEFAUTS = {
     # --- Sécurité -----------------------------------------------------------
     "CONFIRMER_RISQUES": "1",             # demander confirmation (o/n) si risque élevé
     "CONFIRMER_DEPLACEMENT": "1",             # confirmation pour les deplacements de fichiers
+    # Permissions N1/N2/N3 : "toujours" | "demander" | "jamais" (voir jibi2/securite.py).
+    "JIBI_AUTORISATION_N1": "",
+    "JIBI_AUTORISATION_N2": "",
+    "JIBI_AUTORISATION_N3": "",
 }
 
 _cache: dict[str, str] | None = None
