@@ -48,6 +48,57 @@ def _chemin_espace(nom: str) -> Path:
     return chemin
 
 
+# Fichiers secrets : jamais lus, jamais écrits, ni dans l'espace de
+# travail ni n'importe où sur le PC. Un nom qui y ressemble est refusé.
+_EXTENSIONS_SECRETES = {
+    ".pem", ".key", ".pvk", ".ppk", ".kdbx", ".pfx", ".p12", ".p7b",
+    ".p7k", ".jks", ".keystore", ".gnupg", ".gpg", ".pgp", ".asc",
+    ".ovpn", ".rdp", ".rdgw", ".nvkdb",
+}
+_NOMS_CLES_SSH = {"id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", "identity",
+                  "authorized_keys", "known_hosts_validation"}
+_NOMS_SECRETS = {".env", ".netrc", ".npmrc", "credentials.json",
+                 "secrets.json", "token", "tokens.json"}
+
+
+def _est_secret(chemin: Path) -> bool:
+    """Vrai si ce chemin ressemble à un fichier de secrets.
+
+    On pèche par excès : il vaut mieux refuser de lire un rapport.txt
+    inoffensif-de-plus que de fuiter un .env. `.env.exemple` reste lisible
+    (il ne contient que des placeholders)."""
+    nom = chemin.name.lower()
+    suffixe = chemin.suffix.lower()
+    if nom == ".env" or (nom.startswith(".env.") and
+                         nom not in (".env.exemple", ".env.example")):
+        return True
+    if suffixe in _EXTENSIONS_SECRETES:
+        return True
+    if nom in _NOMS_SECRETS:
+        return True
+    # clés privées SSH : id_rsa(.pem), id_ed25519, etc. — mais la partie
+    # publique « .pub » n'a rien de confidentiel
+    if nom.endswith(".pub"):
+        return False
+    racine_nom = nom.rsplit(".", 1)[0]
+    if racine_nom in _NOMS_CLES_SSH or any(nom.startswith(k) for k in _NOMS_CLES_SSH):
+        return True
+    if ".ssh" in chemin.parts:
+        return True
+    return False
+
+
+def _refus_secret(chemin: Path) -> str:
+    return (f"Refusé : « {chemin.name} » ressemble à un fichier de secrets "
+            "(.env, clé privée, coffre de mots de passe…). JIBI ne lit ni "
+            "n'écrit jamais ce type de fichier.")
+
+
+def _racine_donnees() -> Path:
+    """Dossier interne de JIBI (mémoire SQLite, journal, jetons, corbeille)."""
+    return Path(__file__).resolve().parents[1] / "donnees"
+
+
 def _taille_humaine(n: int) -> str:
     if n < 1024:
         return f"{n} o"
@@ -182,6 +233,8 @@ def lister_dossier(dossier: str = "") -> str:
        categorie="fichiers")
 def lire_fichier(nom: str) -> str:
     chemin = _chemin_espace(nom)
+    if _est_secret(chemin):
+        raise ValueError(_refus_secret(chemin))
     if not chemin.is_file():
         return f"Le fichier « {nom} » n'existe pas dans l'espace de travail."
     texte = chemin.read_text(encoding="utf-8", errors="replace")
@@ -196,6 +249,8 @@ def lire_fichier(nom: str) -> str:
        categorie="fichiers", risque="moyen")
 def ecrire_fichier(nom: str, contenu: str) -> str:
     chemin = _chemin_espace(nom)
+    if _est_secret(chemin):
+        raise ValueError(_refus_secret(chemin))
     chemin.parent.mkdir(parents=True, exist_ok=True)
     chemin.write_text(contenu, encoding="utf-8")
     return f"Fichier « {chemin.name} » écrit ({len(contenu)} caractères)."
@@ -207,6 +262,8 @@ def ecrire_fichier(nom: str, contenu: str) -> str:
        categorie="fichiers", risque="moyen")
 def ajouter_fichier(nom: str, contenu: str) -> str:
     chemin = _chemin_espace(nom)
+    if _est_secret(chemin):
+        raise ValueError(_refus_secret(chemin))
     chemin.parent.mkdir(parents=True, exist_ok=True)
     with chemin.open("a", encoding="utf-8") as f:
         f.write(contenu.rstrip() + "\n")
@@ -238,12 +295,22 @@ def chercher_fichier(mot: str) -> str:
     return "\n".join(str(e.relative_to(racine)) for e in trouves)
 
 
-@outil("lire_fichier_pc", "Lit un fichier texte N'IMPORTE OÙ sur le PC (lecture seule).",
+@outil("lire_fichier_pc", "Lit un fichier texte N'IMPORTE OÙ sur le PC (lecture seule). "
+       "Refuse les secrets (.env, clés privées, coffres…) et le dossier interne donnees/.",
        {"chemin": {"type": "str", "obligatoire": True,
                    "description": "chemin complet, ex. C:/Users/moi/Documents/notes.txt"}},
        categorie="fichiers", risque="eleve")
 def lire_fichier_pc(chemin: str) -> str:
     cible = Path(chemin).expanduser()
+    if _est_secret(cible):
+        raise ValueError(_refus_secret(cible))
+    try:
+        if cible.resolve().is_relative_to(_racine_donnees()):
+            raise ValueError(
+                "Refusé : « donnees/ » est le contenu interne de JIBI "
+                "(mémoire, journal, jetons) : jamais lu par un outil PC.")
+    except OSError:
+        pass
     if not cible.is_file():
         return f"Introuvable ou pas un fichier : {chemin}"
     texte = cible.read_text(encoding="utf-8", errors="replace")
