@@ -22,11 +22,64 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
+from jibi2 import http_local
+
 PAGE = Path(__file__).parent / "panneau.html"
 
 SERVEUR: ThreadingHTTPServer | None = None
 _ASSISTANT = None
 _VERROU = threading.Lock()          # un message à la fois (histoire partagée)
+
+
+def _etat_securite() -> dict:
+    """Les verrous du panneau, interrogés AU MOMENT de la requête :
+    rien n'est recopié en dur — si le code change, l'état change."""
+    verrous: list[dict] = []
+    try:
+        import inspect
+        import contextlib
+        from outils import executer as _executer
+        from outils import fichiers as _fichiers
+        from jibi2 import http_local as _http_local
+        from jibi2.securite import Garde
+
+        def verrou(nom: str, ok: bool) -> None:
+            verrous.append({"nom": nom, "actif": bool(ok)})
+
+        verrou("requêtes vérifiées par jibi2/http_local (socket, Host,"
+               " X-Forwarded-*, Origin)",
+               all(hasattr(_http_local, n) for n in
+                   ("requete_locale", "host_local", "origin_locale")))
+        verrou("secrets refusés (.env, clés privées, coffres)",
+               callable(getattr(_fichiers, "_est_secret", None)))
+        verrou("dossier interne donnees/ jamais lu par un outil PC",
+               callable(getattr(_fichiers, "_racine_donnees", None)))
+        try:
+            verrou("évasion d'espace de travail refusée",
+                   "is_relative_to" in inspect.getsource(_fichiers._chemin_espace))
+            verrou("suppression = corbeille (récupérable)",
+                   "corbeille" in inspect.getsource(_fichiers.supprimer_fichier))
+            verrou("risque élevé exige une confirmation humaine",
+                   "CONFIRMER_RISQUES" in inspect.getsource(Garde.autoriser))
+        except OSError:
+            verrou("le code n'expose plus ses protections", False)
+        verrou("moteur d'outils = la Garde (outils.executer)", callable(_executer))
+        mcp_exposes: set | None = None
+        mcp_verrouille = False
+        with contextlib.suppress(Exception):
+            from outils import OUTILS as _OUTILS
+            import mcp_server
+            mcp_exposes = set(mcp_server.MCP_EXPOSES)
+            mcp_verrouille = bool(mcp_exposes) and all(
+                mcp_server.OUTILS.get(n) is None
+                or mcp_server.OUTILS[n].risque != "eleve"
+                for n in mcp_exposes)
+        verrou("serveur MCP sur liste blanche (aucun outil risqué)",
+               mcp_verrouille)
+    except Exception:                   # noqa: BLE001
+        verrous.append({"nom": "état de sécurité indisponible", "actif": False})
+    return {"verrous": verrous,
+            "tout": all(v["actif"] for v in verrous)}
 
 
 def _normaliser_texte(texte) -> str:
@@ -210,8 +263,24 @@ class _Gestionnaire(BaseHTTPRequestHandler):
             return
         super().handle_error(request, client_address)
 
+    def _verifie_locale(self) -> bool:
+        """Refuse une requête qui n'est pas vraiment locale (voir
+        jibi2/http_local) : socket réseau, Host forgé (DNS rebinding),
+        tunnel X-Forwarded-*, Origin tierce en écriture (CSRF)."""
+        locale, raison = http_local.requete_locale(self.client_address[0],
+                                                   self.headers)
+        if not locale:
+            self._json({"erreur": raison}, 403)
+            return False
+        if self.command == "POST" and http_local.origin_interdite(self.headers):
+            self._json({"erreur": "Origin non locale : CSRF refusé."}, 403)
+            return False
+        return True
+
     def do_GET(self) -> None:
         route = urllib.parse.urlsplit(self.path).path
+        if not self._verifie_locale():
+            return
         if route in ("/", "/panneau"):
             brut = _page_html()
             self.send_response(200)
@@ -277,6 +346,8 @@ class _Gestionnaire(BaseHTTPRequestHandler):
             self._json({"ok": "introuvable" not in message, "message": message})
         elif route == "/api/documents":
             self._json({"documents": _documents()})
+        elif route == "/api/securite":
+            self._json(_etat_securite())
         elif route == "/api/audit":
             from jibi2 import audit
             self._json({"evenements": audit.lire(20)})
@@ -301,6 +372,8 @@ class _Gestionnaire(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         route = urllib.parse.urlsplit(self.path).path
+        if not self._verifie_locale():
+            return
         if route == "/api/import":
             try:
                 taille = int(self.headers.get("Content-Length", "0") or 0)
