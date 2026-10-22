@@ -14,7 +14,7 @@ JIBI2/
 ├── requirements.txt     ← installateur simple (pip install -r)
 ├── requirements-figees.txt ← versions exactes résolues (verrou, Windows/3.12)
 ├── mcp_server.py        ← serveur MCP local : liste blanche, double contrôle, jeton
-├── tests/               ← suite hors-ligne : 39 modules mNN + moteur + 233 contrôles
+├── tests/               ← suite hors-ligne : 39 modules mNN + moteur + 244 contrôles
 ├── .github/workflows/ci.yml ← CI : Windows, Python 3.13 (bloquant) + 3.14
 ├── ruff.toml            ← lint ciblé (F821/F811/F822 dans la CI)
 ├── jibi2/               ← le noyau
@@ -179,7 +179,7 @@ Dans la console :
 
 ## Qualité : suite complète, CI, verrou de dépendances
 
-- **La suite hors-ligne** (`tests/verification.py`) : **233 contrôles**, sans
+- **La suite hors-ligne** (`tests/verification.py`) : **244 contrôles**, sans
   réseau, sans Ollama, sans micro ; scopée en 39 modules (`tests/mNN_*.py`)
   + `tests/moteur.py` (préludé partagé), chaque module lancé seul ;
   `tests/test_suite.py` est l'entrée pytest. La CI exécute
@@ -238,6 +238,22 @@ une fois, jamais « plus rien ne me demandera ».
   wesbos/amaran-BLE-control, puis `JIBI_AMARAN_URL=http://ip-esp32:2708` dans
   le .env. Ensuite : « allume la key light à 60 % », « amaran en 5600 kelvin »,
   « éteins la lumière vidéo ».
+
+## Cerveau cloud : opt-in dur (fermé par défaut)
+
+Par défaut, JIBI est **100 % local** : règle n° 1, aucune donnée ne quitte
+le PC. Il existe pourtant un cerveau distant facultatif, écrit en
+`urllib.request` pur (zéro SDK, zéro dépendance nouvelle) :
+
+- `ClientCloud` — OpenRouter (API compatible OpenAI) ;
+- `ClientAnthropic` — Anthropic, intégrable à un modèle Claude.
+
+**Le verrou** : même si une clé est présente dans le `.env`, **rien ne part
+vers un serveur** tant que `JIBI_CLOUD=1` n'est pas écrit explicitement.
+Sans ça, le routeur reste local en toutes circonstances — y compris en cas
+de panne d'Ollama. Le panneau de sécurité (`/api/securite`) affiche le
+verrou « cerveau distant désactivé » ; il se décoche rouge le jour où le
+cloud est réellement branché, pour que ce soit visible en permanence.
 
 ## Navigation Browser Use locale
 

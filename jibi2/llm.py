@@ -1,9 +1,12 @@
-"""Client LLM de JIBI 2 — cerveau local (Ollama) + cerveau cloud (OpenRouter).
+"""Client LLM de JIBI 2 — cerveau local (Ollama) + cerveau cloud optionnel.
 
-ClientLLM   : inchangé, parle à Ollama en local (bibliothèque standard).
-ClientCloud : même interface, parle à OpenRouter (API compatible OpenAI).
-ClientRouteur : choisit automatiquement local ou cloud selon la complexité
-                de la demande, et bascule aussi si le local échoue.
+ClientLLM        : inchangé, parle à Ollama en local (bibliothèque standard).
+ClientCloud      : même interface, parle à OpenRouter (API compatible OpenAI).
+ClientAnthropic  : même interface, parle à Anthropic (urllib pur, zéro SDK).
+ClientRouteur    : choisit local ou distant, et bascule aussi si le local
+                   échoue — MAIS le distant est FERMÉ PAR DEFAUT : tant que
+                   JIBI_CLOUD=0 (défaut du .env), rien ne quitte le PC,
+                   jamais, même si une clé cloud est présente.
 """
 from __future__ import annotations
 
@@ -331,6 +334,157 @@ class ClientCloud:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  Cerveau distant (bis) : Anthropic — même interface, stdlib uniquement
+# ═══════════════════════════════════════════════════════════════════════
+
+class ClientAnthropic:
+    """Cerveau distant Anthropic — pure bibliothèque standard, zéro SDK.
+
+    Deux particularités de cette API : le message « system » sort de la
+    liste (paramètre de haut niveau) et `max_tokens` est obligatoire.
+    ATTENTION — même si ce client existe, il ne sert QUE si JIBI_CLOUD=1
+    est écrit dans le .env (voir fabrique_cloud plus bas).
+    """
+
+    URL_API = "https://api.anthropic.com/v1/messages"
+    VERSION = "2023-06-01"
+
+    def __init__(self, cle: str | None = None, modele: str | None = None) -> None:
+        self.cle = cle or config.valeur("ANTHROPIC_API_KEY", "")
+        self.modele = modele or config.valeur(
+            "JIBI_CLOUD_MODEL_ANTHROPIC", "claude-sonnet-4-20250514")
+
+    def disponible(self) -> bool:
+        return bool(self.cle)
+
+    def _entetes(self) -> dict:
+        return {
+            "Content-Type": "application/json",
+            "x-api-key": self.cle,
+            "anthropic-version": self.VERSION,
+        }
+
+    def _corps(self, messages: list[dict], temperature: float, stream: bool) -> dict:
+        systeme = "\n".join(m.get("content", "") for m in messages
+                            if m.get("role") == "system")
+        corps: dict = {
+            "model": self.modele,
+            "messages": [{"role": m["role"], "content": m.get("content", "")}
+                         for m in messages
+                         if m.get("role") in ("user", "assistant")],
+            "stream": stream,
+            "temperature": temperature,
+            "max_tokens": _entier("JIBI_CLOUD_MAX", 1200),
+        }
+        if systeme:
+            corps["system"] = systeme
+        return corps
+
+    def _requete(self, corps: dict) -> urllib.request.Request:
+        return urllib.request.Request(
+            self.URL_API,
+            data=json.dumps(corps).encode("utf-8"),
+            headers=self._entetes(),
+            method="POST",
+        )
+
+    def _lever_erreur_http(self, e: urllib.error.HTTPError) -> None:
+        if e.code == 401:
+            raise ErreurLLM("Clé ANTHROPIC_API_KEY invalide ou absente du .env.") from e
+        if e.code == 429:
+            raise ErreurLLM(
+                "Limite de débit Anthropic atteinte. Réessaie dans un instant, "
+                "ou repasse en local."
+            ) from e
+        raise ErreurLLM(f"Anthropic a répondu une erreur HTTP {e.code}.") from e
+
+    @staticmethod
+    def _texte_donnees(donnees: dict) -> str:
+        """Extrait le texte (« content » est une liste de blocs typés)."""
+        blocs = donnees.get("content") or []
+        if isinstance(blocs, str):
+            return blocs
+        return "".join(b.get("text", "") for b in blocs
+                       if isinstance(b, dict) and b.get("type") == "text")
+
+    def discuter(self, messages: list[dict], temperature: float = 0.4) -> str:
+        if not self.disponible():
+            raise ErreurLLM("ANTHROPIC_API_KEY absente du .env : le cloud n'est pas configuré.")
+        corps = self._corps(messages, temperature, stream=False)
+        try:
+            with urllib.request.urlopen(self._requete(corps), timeout=120) as rep:
+                donnees = json.loads(rep.read().decode("utf-8"))
+        except json.JSONDecodeError as e:
+            raise ErreurLLM("La réponse d'Anthropic est illisible.") from e
+        except urllib.error.HTTPError as e:
+            self._lever_erreur_http(e)
+        except urllib.error.URLError as e:
+            raise ErreurLLM(f"Anthropic injoignable (connexion ?) : {e}") from e
+        return nettoyer_think(self._texte_donnees(donnees)).strip()
+
+    def _lire_flux_sse(self, reponse, on_chunk) -> str:
+        """Flux SSE identique à ClientCloud, event « content_block_delta »."""
+        morceaux: list[str] = []
+        for ligne_brute in reponse:
+            ligne = ligne_brute.decode("utf-8", errors="replace").strip()
+            if not ligne or not ligne.startswith("data:"):
+                continue
+            charge = ligne[len("data:"):].strip()
+            try:
+                donnees = json.loads(charge)
+            except json.JSONDecodeError:
+                continue
+            if donnees.get("type") == "message_stop":
+                break
+            if donnees.get("type") == "content_block_delta":
+                delta = (donnees.get("delta") or {}).get("text", "")
+                if delta:
+                    morceaux.append(delta)
+                    if on_chunk is not None:
+                        on_chunk(delta)
+        return "".join(morceaux)
+
+    def discuter_stream(self, messages: list[dict], temperature: float = 0.4,
+                        on_chunk=None) -> str:
+        if not self.disponible():
+            raise ErreurLLM("ANTHROPIC_API_KEY absente du .env : le cloud n'est pas configuré.")
+        corps = self._corps(messages, temperature, stream=True)
+        try:
+            with urllib.request.urlopen(self._requete(corps), timeout=120) as reponse:
+                complet = self._lire_flux_sse(reponse, on_chunk)
+        except urllib.error.HTTPError as e:
+            self._lever_erreur_http(e)
+        except urllib.error.URLError as e:
+            raise ErreurLLM(f"Anthropic injoignable (connexion ?) : {e}") from e
+        return nettoyer_think(complet).strip()
+
+
+def fabrique_cloud():
+    """Le cerveau distant configuré, ou None. Fermé par défaut.
+
+    Règle n° 1 (« AUCUNE donnée ne quitte le PC ») : tant que JIBI_CLOUD=0
+    (le défaut du .env), renvoie None — le routeur reste 100 % local, même
+    si une clé cloud traîne dans le .env, même en cas de panne d'Ollama.
+    """
+    if not config.valeur_bool("JIBI_CLOUD"):
+        return None
+    marque = (config.valeur("JIBI_CLOUD_MARQUE", "openrouter") or "openrouter").strip().lower()
+    client = ClientAnthropic() if marque == "anthropic" else ClientCloud()
+    if not client.disponible():
+        return None
+    return client
+
+
+def cloud_actif() -> bool:
+    """Vrai si un cerveau distant est réellement activé ET configuré.
+
+    C'est ce que le panneau de sécurité affiche : False par défaut, True
+    seulement quand tu as toi-même écrit JIBI_CLOUD=1 + une clé valide.
+    """
+    return fabrique_cloud() is not None
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  Routeur : choisit local ou cloud automatiquement
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -358,22 +512,26 @@ def _demande_complexe(texte: str) -> bool:
 
 
 class ClientRouteur:
-    """Choisit ClientLLM (local) ou ClientCloud (OpenRouter) automatiquement.
+    """Choisit ClientLLM (local) ou le cerveau distant (OpenRouter/Anthropic).
 
     Règles, dans l'ordre :
-    1. Si JIBI_CLOUD_AUTO=0 dans le .env → toujours local (comportement actuel).
-    2. Si la demande est jugée complexe (_demande_complexe) ET que le cloud
-       est configuré (clé présente) → cloud direct.
-    3. Sinon → local ; si le local échoue (Ollama éteint, modèle absent...)
-       ET que le cloud est configuré → repli automatique sur le cloud.
+    1. Si JIBI_CLOUD=0 dans le .env (défaut) → toujours local, même si une
+       clé cloud est présente, même si le local échoue. Rien ne quitte le PC.
+    2. Cloud activé mais JIBI_CLOUD_AUTO=0 → local, avec repli sur le cloud
+       uniquement si le local échoue (Ollama éteint, modèle absent...).
+    3. Cloud activé et JIBI_CLOUD_AUTO=1 → cloud direct pour une demande
+       jugée complexe (_demande_complexe), sinon local.
     """
 
     def __init__(self) -> None:
         self.local = ClientLLM()
-        self.cloud = ClientCloud()
+        self.cloud = fabrique_cloud()   # None = cloud OFF (JIBI_CLOUD=0)
         self.auto_actif = config.valeur_bool("JIBI_CLOUD_AUTO")
         self._contexte_local = threading.local()
         self.dernier_moteur = "local"  # exposé pour affichage ("JIBI (cloud) › ...")
+
+    def _dispo_cloud(self) -> bool:
+        return self.cloud is not None and self.cloud.disponible()
 
     @contextlib.contextmanager
     def contexte_local(self):
@@ -389,14 +547,16 @@ class ClientRouteur:
         return bool(getattr(self._contexte_local, "active", False))
 
     def _choisir(self, texte_utilisateur: str) -> ClientLLM | ClientCloud:
-        if self._local_force() or not self.auto_actif or not self.cloud.disponible():
+        if self._local_force() or not self._dispo_cloud():
             self.dernier_moteur = "local"
             return self.local
-        if _demande_complexe(texte_utilisateur):
-            self.dernier_moteur = "cloud"
-            return self.cloud
-        self.dernier_moteur = "local"
-        return self.local
+        if not self.auto_actif or not _demande_complexe(texte_utilisateur):
+            self.dernier_moteur = "local"
+            # Si le demandeur ne réclame le cloud que sur complexité, la
+            # question simple reste locale (le repli sur panne reste possible).
+            return self.local
+        self.dernier_moteur = "cloud"
+        return self.cloud
 
     @staticmethod
     def _dernier_texte_utilisateur(messages: list[dict]) -> str:
@@ -411,7 +571,7 @@ class ClientRouteur:
         try:
             return moteur.discuter(messages, temperature)
         except ErreurLLM:
-            if moteur is self.local and not self._local_force() and self.cloud.disponible():
+            if moteur is self.local and not self._local_force() and self._dispo_cloud():
                 self.dernier_moteur = "cloud"
                 return self.cloud.discuter(messages, temperature)
             raise
@@ -441,7 +601,7 @@ class ClientRouteur:
                 return self._stream_sans_risque_cloud(messages, temperature, on_chunk)
             return moteur.discuter_stream(messages, temperature, on_chunk=on_chunk)
         except ErreurLLM:
-            if moteur is self.local and not self._local_force() and self.cloud.disponible():
+            if moteur is self.local and not self._local_force() and self._dispo_cloud():
                 self.dernier_moteur = "cloud"
                 return self._stream_sans_risque_cloud(messages, temperature, on_chunk)
             raise
@@ -453,7 +613,7 @@ class ClientRouteur:
         return self.local.etat(force)
 
     def disponible(self) -> bool:
-        return self.local.disponible() or self.cloud.disponible()
+        return self.local.disponible() or self._dispo_cloud()
 
     def modele_present(self) -> bool:
         return self.local.modele_present()

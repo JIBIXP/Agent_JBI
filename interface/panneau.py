@@ -41,6 +41,7 @@ def _etat_securite() -> dict:
         from outils import executer as _executer
         from outils import fichiers as _fichiers
         from jibi2 import http_local as _http_local
+        from jibi2 import llm as _llm
         from jibi2.securite import Garde
 
         def verrou(nom: str, ok: bool) -> None:
@@ -67,6 +68,11 @@ def _etat_securite() -> dict:
         except OSError:
             verrou("le code n'expose plus ses protections", False)
         verrou("moteur d'outils = la Garde (outils.executer)", callable(_executer))
+        # Règle n° 1 : le verrou « cerveau distant » est ACTIF tant qu'aucun
+        # cloud n'est réellement branché (JIBI_CLOUD=1 + clé). Si un jour tu
+        # actives le cloud, ce verrou passe à inactif : le tableau de bord
+        # l'affiche décoché — tu ne peux pas l'oublier.
+        verrou("cerveau distant désactivé (100 % local)", not _llm.cloud_actif())
         mcp_exposes: set | None = None
         mcp_verrouille = False
         with contextlib.suppress(Exception):

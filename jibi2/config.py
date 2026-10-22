@@ -89,6 +89,17 @@ DEFAUTS = {
     "JIBI_BROWSER_WAIT": "1.5",
     "JIBI_BROWSER_DOMAINS": "",             # vide = domaine demandé uniquement
     "JIBI_CHROME_SEARCH_BACKGROUND": "1",  # recherche Google sans focus ni fenêtre
+    # --- Cerveau distant (Fermé par défaut : règle n° 1) --------------------
+    # Règle n° 1 de JIBI : AUCUNE donnée ne quitte le PC. Même avec une clé
+    # cloud dans le .env, rien ne part vers un serveur tant que JIBI_CLOUD=1
+    # n'est pas écrit explicitement. 0 = 100 % local, toujours.
+    "JIBI_CLOUD": "0",
+    "JIBI_CLOUD_MARQUE": "openrouter",     # openrouter | anthropic
+    "JIBI_CLOUD_AUTO": "0",                # 1 = complexe → cloud, repli sur panne
+    "JIBI_CLOUD_MODEL": "deepseek/deepseek-chat",
+    "JIBI_CLOUD_MODEL_ANTHROPIC": "claude-sonnet-4-20250514",
+    "OPENROUTER_API_KEY": "",
+    "ANTHROPIC_API_KEY": "",
     # --- Sécurité -----------------------------------------------------------
     "CONFIRMER_RISQUES": "1",             # demander confirmation (o/n) si risque élevé
     "CONFIRMER_DEPLACEMENT": "1",             # confirmation pour les deplacements de fichiers
