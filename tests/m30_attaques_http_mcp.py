@@ -128,3 +128,18 @@ verif("mcp : jeton invalide refusé",
       not _mcp35.jeton_valide("") and not _mcp35.jeton_valide("faux-jeton"))
 verif("mcp : le bon jeton passe",
       _mcp35.jeton_valide(_mcp35.jeton(creer=False)))
+
+# Panneau — confirmation web du mode Jarvis : fail-closed (l'humain absent
+# n'autorise rien), branchée explicitement sur la Garde par run.py.
+import interface.panneau as _panneau_cw   # noqa: E402
+from jibi2.securite import Garde as _Garde_cw   # noqa: E402
+_garde_cw = _Garde_cw()
+_panneau_cw.brancher_garde(_garde_cw)
+verif("panneau : confirmation web fail-closed et branchable",
+      _panneau_cw.demander_confirmation("essai", "détail", delai=0.2) is False
+      and _garde_cw.confirmer is _panneau_cw.demander_confirmation
+      and not _garde_cw.est_permissive_par_defaut()
+      and _panneau_cw.CONFIRMATION_BRANCHEE.is_set()
+      and _panneau_cw.arreter() is None
+      and any(v.get("cle") == "confirmation_web" and v.get("ok")
+              for v in _etat_securite()["verrous"]))

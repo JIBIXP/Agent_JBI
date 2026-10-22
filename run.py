@@ -1,17 +1,21 @@
 #!/usr/bin/env python3
 """JIBI 2 — point d'entrée unique.
 
-  python run.py                 → fenêtre de bureau (Tkinter)
-  python run.py --console       → console
-  python run.py --console --voix          → console + JIBI parle
-  python run.py --mains-libres            → « jibi, … » au micro
-  python run.py --sans-confirmation       → ne jamais demander confirmation (dangereux)
+  python run.py            → mode Jarvis : grand tableau de bord plein écran
+                             dans Chrome (kiosque), plus de fenêtre Tkinter
+  python run.py --bureau   → ancienne fenêtre de bureau (Tkinter)
+  python run.py --console  → console (les confirmations se font au clavier)
+  python run.py --console --voix       → console + JIBI parle
+  python run.py --mains-libres         → « jibi, … » au micro
+  python run.py --sans-confirmation    → ne jamais demander confirmation (dangereux)
 """
 from __future__ import annotations
 
 import argparse
+import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 
 for _flux in (sys.stdout, sys.stderr):
@@ -78,9 +82,56 @@ def lancer_mcp() -> None:
         print(f"(MCP serveur non démarré : {e})")
 
 
+def _mode_jarvis(port_panneau: int) -> None:
+    """Mode Jarvis (défaut) : le grand tableau de bord s'ouvre plein écran
+    (kiosque) dans Chrome/Edge ; la fenêtre Tkinter ne s'ouvre plus.
+
+    JIBI continue de tout faire (assistant web, planificateur, autonomie)
+    jusqu'à Ctrl+C. Sortir du kiosque : Alt+F4 ferme l'écran ; Ctrl+C arrête
+    JIBI. JIBI_JARVIS_FENETRE=1 dans le .env → fenêtre normale (F11 pour
+    le plein écran) au lieu du kiosque."""
+    import webbrowser
+    url = f"http://127.0.0.1:{port_panneau}"
+    navigateur = None
+    try:
+        from outils.applications import _trouver_chrome
+        navigateur = _trouver_chrome()
+    except Exception:
+        navigateur = None
+    ouvert = False
+    if navigateur:
+        commande = [navigateur]
+        if not config.valeur_bool("JIBI_JARVIS_FENETRE"):
+            commande.append("--kiosk")   # plein écran, sans barre ni onglets
+        commande.append(url)
+        try:
+            subprocess.Popen(commande)
+            ouvert = True
+        except OSError:
+            ouvert = False
+    if not ouvert:
+        webbrowser.open(url)
+        print("(Chrome/Edge introuvables — navigateur par défaut en fenêtre ; "
+              "F11 pour le plein écran)")
+    print(f"Mode Jarvis : tableau de bord sur {url} — Ctrl+C pour arrêter JIBI.")
+    try:
+        while True:
+            time.sleep(3600)             # les services tournent en threads
+    except KeyboardInterrupt:
+        print("\nJIBI s'arrête. À bientôt !")
+    finally:
+        try:
+            from interface import panneau
+            panneau.arreter()
+        except Exception:
+            pass
+
+
 def principal() -> int:
     parseur = argparse.ArgumentParser(description="JIBI 2 — assistant local (Ollama + voix).")
     parseur.add_argument("--console", action="store_true", help="console au lieu de la fenêtre")
+    parseur.add_argument("--bureau", action="store_true",
+                         help="ancienne fenêtre de bureau (Tkinter) au lieu du mode Jarvis")
     parseur.add_argument("--voix", action="store_true", help="JIBI parle ses réponses")
     parseur.add_argument("--mains-libres", action="store_true", help="boucle micro « jibi, … »")
     parseur.add_argument("--sans-confirmation", action="store_true",
@@ -109,10 +160,12 @@ def principal() -> int:
     regler_services(assistant=assistant, garde=garde, annonces=annonces)
 
     # panneau web local (page HTML discutée au clavier, 127.0.0.1 uniquement)
+    port_panneau = 0
+    module_panneau = None
     try:
         from interface import panneau as module_panneau
-        numero = module_panneau.demarrer(assistant)
-        print(f"Panneau local : http://127.0.0.1:{numero}")
+        port_panneau = module_panneau.demarrer(assistant)
+        print(f"Panneau local : http://127.0.0.1:{port_panneau}")
     except Exception as echec:
         print(f"(panneau web indisponible : {echec})")
     from jibi2.planificateur import demarrer as demarrer_planificateur
@@ -129,7 +182,15 @@ def principal() -> int:
         thread.start()
     voix_on = arguments.voix or config.valeur_bool("JIBI_VOIX_ACTIVE")
 
-    if arguments.mains_libres:
+    if arguments.bureau:
+        try:
+            from interface.bureau import lancer as lancer_fenetre
+            lancer_fenetre(assistant, garde, voix_on=voix_on, annonces=annonces)
+        except Exception as e:  # pas d'écran / Tkinter cassé → repli console
+            print(f"(fenêtre indisponible : {e} — passage en console)")
+            from interface.terminal import lancer
+            lancer(assistant, garde, memoire, voix_on=voix_on, annonces=annonces)
+    elif arguments.mains_libres:
         from interface.terminal import lancer
         lancer(assistant, garde, memoire, voix_on=voix_on, mains_libres=True,
                annonces=annonces)
@@ -137,11 +198,15 @@ def principal() -> int:
         from interface.terminal import lancer
         lancer(assistant, garde, memoire, voix_on=voix_on, annonces=annonces)
     else:
-        try:
-            from interface.bureau import lancer as lancer_fenetre
-            lancer_fenetre(assistant, garde, voix_on=voix_on, annonces=annonces)
-        except Exception as e:  # pas d'écran / Tkinter cassé → repli console
-            print(f"(fenêtre indisponible : {e} — passage en console)")
+        # Mode Jarvis (défaut) : le tableau de bord EST l'interface. L'avis
+        # humain sur les actions risquées passe par la boîte du navigateur.
+        if port_panneau:
+            if not arguments.sans_confirmation:
+                module_panneau.brancher_garde(garde)
+            _mode_jarvis(port_panneau)
+        else:
+            # Aucun panneau : repli console (le terminal pose les questions).
+            print("(panneau indisponible → repli console)")
             from interface.terminal import lancer
             lancer(assistant, garde, memoire, voix_on=voix_on, annonces=annonces)
     return 0

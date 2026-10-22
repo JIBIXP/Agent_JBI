@@ -365,6 +365,30 @@ footer{padding:8px 26px 18px}
   .tb-art,.tableau.entree .tb-carte,.tableau.entree .tb-puce,.tableau.entree .tb-vedette{animation:none}
   .tb-carte,.tb-puce,#reacteur,.orbe{transition:none;animation:none}
 }
+/* ══ confirmation web : l'avis humain quand il n'y a plus de fenêtre ══
+   (mode Jarvis — la boîte remplace la fenêtre Tkinter du bureau) */
+#confirmation{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center}
+#confirmation[hidden]{display:none}
+.conf-voile{position:absolute;inset:0;background:rgba(4,7,6,.76)}
+.conf-boite{position:relative;max-width:540px;width:calc(100vw - 48px);
+  background:var(--carte);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+  border-radius:16px;padding:22px 24px 18px;box-shadow:0 30px 90px #000c}
+.conf-boite h2{margin:0 0 6px;font:600 12.5px/1.3 var(--sans);color:var(--accent2);
+  letter-spacing:.14em;text-transform:uppercase}
+.conf-nom{margin:2px 0 0;font:600 17px/1.4 var(--sans);color:var(--texte);
+  white-space:pre-wrap;overflow-wrap:anywhere}
+.conf-detail{margin:10px 0 0;font:12.5px/1.7 var(--mono);color:#a8b5b0;
+  white-space:pre-wrap;overflow-wrap:anywhere;max-height:38vh;overflow:auto}
+.conf-boutons{display:flex;gap:10px;margin-top:20px}
+.conf-boutons button{flex:1;padding:11px 14px;border-radius:10px;cursor:pointer;
+  border:1px solid var(--champ-bord);background:var(--champ);color:var(--texte);
+  font:600 14px var(--sans)}
+.conf-boutons button:hover{border-color:var(--accent);color:var(--accent2)}
+#conf-oui{background:var(--accent);border-color:var(--accent);color:#08251c}
+#conf-oui:hover{background:var(--accent2);color:#08251c}
+.conf-boutons #conf-oui:hover{color:#08251c}
+#conf-non{color:#c4759d}
+.conf-note{margin:14px 0 0;font:11.5px/1.6 var(--mono);color:#6d7976}
 ::-webkit-scrollbar{width:9px;height:9px}
 ::-webkit-scrollbar-thumb{background:var(--champ-bord);border-radius:9px}
 ::-webkit-scrollbar-track{background:transparent}
@@ -535,6 +559,22 @@ footer{padding:8px 26px 18px}
         </button>
       </div>
     </footer>
+  </div>
+</div>
+
+<!-- ══ boîte de confirmation web (mode Jarvis) ══════════════════════════ -->
+<div id="confirmation" hidden>
+  <div class="conf-voile"></div>
+  <div class="conf-boite" role="dialog" aria-modal="true" aria-labelledby="conf-nom">
+    <h2>JIBI demande ton accord</h2>
+    <p class="conf-nom" id="conf-nom">—</p>
+    <p class="conf-detail" id="conf-detail"></p>
+    <div class="conf-boutons">
+      <button type="button" id="conf-non">Refuser (Échap)</button>
+      <button type="button" id="conf-oui">Accorder</button>
+    </div>
+    <p class="conf-note">Sans réponse dans 2 minutes, JIBI refuse tout seul
+      (fail-closed) — règle n° 1 : rien de risqué sans ton accord.</p>
   </div>
 </div>
 
@@ -1120,6 +1160,45 @@ for(const r of RACCOURCIS){
 }
 bulle("Salut ! Je suis prêt. Écris, clique sur le micro ou demande-moi une analyse.",false);
 
+/* ══ confirmation web : la Garde pose ses questions ici ══════════════════
+   (mode Jarvis — plus de fenêtre Tkinter, l'avis humain passe par la page).
+   Sondage à 1 s ; sans réponse de l'humain, le serveur refuse tout seul. */
+let DEMANDE_CONFIRMATION=null;
+async function surveillerConfirmation(){
+  let j=null;
+  try{ j=await(await fetch("/api/confirmation")).json(); }catch(e){ return; }
+  const d=j.demande||null;
+  const boite=$("confirmation");
+  if(!d){
+    if(DEMANDE_CONFIRMATION){DEMANDE_CONFIRMATION=null;boite.hidden=true;}
+    return;
+  }
+  if(DEMANDE_CONFIRMATION&&DEMANDE_CONFIRMATION.id===d.id) return;
+  DEMANDE_CONFIRMATION=d;
+  $("conf-nom").textContent=d.nom;
+  $("conf-detail").textContent=d.detail||"";
+  boite.hidden=false;
+}
+async function repondre(accepte){
+  if(!DEMANDE_CONFIRMATION) return;
+  const id=DEMANDE_CONFIRMATION.id;
+  DEMANDE_CONFIRMATION=null;
+  $("confirmation").hidden=true;
+  try{
+    await fetch("/api/confirmation/repondre",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({id,accepte})});
+  }catch(e){}
+}
+$("conf-oui").addEventListener("click",()=>repondre(true));
+$("conf-non").addEventListener("click",()=>repondre(false));
+window.addEventListener("keydown",e=>{
+  if(DEMANDE_CONFIRMATION&&(e.key==="Escape"||e.key==="n"||e.key==="N")){
+    e.preventDefault();repondre(false);
+  }
+});
+setInterval(surveillerConfirmation,1000);
+
 /* premier affichage : tableau de bord plein cadre, puis les pages à la demande */
 dimensionnerReacteur();
 boucleReacteur();
@@ -1138,6 +1217,7 @@ setInterval(rafraichirAudit,60000);
 setInterval(rafraichirSessions,20000);
 setInterval(()=>{if(pageCourante==="tableau"){rendreSignaux();rendreSecurite();rendreActivite();}},30000);
 rafraichirSessions();
+surveillerConfirmation();
 ajusterSaisie();
 </script>
 </body>

@@ -35,6 +35,15 @@ SERVEUR: ThreadingHTTPServer | None = None
 _ASSISTANT = None
 _VERROU = threading.Lock()          # un message à la fois (histoire partagée)
 
+# ══ confirmation web ══════════════════════════════════════════════════════
+# Mode Jarvis : il n'y a plus de fenêtre Tkinter, donc l'avis humain sur les
+# actions risquées passe par le navigateur. Sans réponse (page fermée,
+# utilisateur absent) = REFUS — on ne fail jamais ouvert (règle n° 1).
+DUREE_CONFIRMATION = 120.0          # secondes avant refus automatique
+CONFIRMATION_BRANCHEE = threading.Event()   # activée par brancher_garde()
+_VERROU_CONFIRMATION = threading.Lock()
+_CONFIRMATIONS: list[dict] = []     # demandes en attente (première posée = première montrée)
+
 
 def _normaliser_texte(texte) -> str:
     """Normalise les caractères de sortie console avant l'envoi au navigateur."""
@@ -83,6 +92,38 @@ def _assurer_assistant():
         # l'écran : passer par run.py pour avoir la boîte de dialogue.
         _ASSISTANT = Assistant(Memoire(), Garde())
     return _ASSISTANT
+
+
+def brancher_garde(garde) -> None:
+    """Branche la boîte de confirmation WEB sur cette Garde.
+
+    Mode Jarvis : plus de fenêtre Tkinter, donc l'avis humain passe par le
+    navigateur. Sans ceci, la Garde garde sa lambda par défaut (autorise
+    sans avis) — inacceptable (règle n° 1). run.py l'appelle dès que le
+    panneau est démarré."""
+    garde.confirmer = demander_confirmation
+    CONFIRMATION_BRANCHEE.set()
+
+
+def demander_confirmation(nom: str = "action", detail: str = "",
+                          delai: float = DUREE_CONFIRMATION) -> bool:
+    """Pose la question au navigateur et bloque jusqu'à réponse ou délai.
+
+    La page cherche /api/confirmation à chaque seconde, affiche la première
+    demande en attente, et tranche via /api/confirmation/repondre.
+    Personne pour répondre = REFUS (fail-closed, règle n° 1)."""
+    evenement = threading.Event()
+    demande = {"id": f"c{time.time_ns()}", "nom": nom, "detail": detail,
+               "reponse": None, "evenement": evenement}
+    with _VERROU_CONFIRMATION:
+        _CONFIRMATIONS.append(demande)
+    evenement.wait(delai)
+    with _VERROU_CONFIRMATION:
+        try:
+            _CONFIRMATIONS.remove(demande)
+        except ValueError:
+            pass
+    return demande["reponse"] is True
 
 
 def _etat_securite() -> dict:
@@ -221,6 +262,20 @@ def _etat_securite() -> dict:
                    "ACTIVÉ (JIBI_CLOUD=1) — certaines demandes peuvent sortir "
                    "du PC, selon la marque choisie"),
         "source": ".env · jibi2/llm.py",
+    })
+    # Mode Jarvis : l'avis humain passe par la boîte dans le navigateur.
+    # Non branché ici veut dire : mode bureau (fenêtre Tkinter) ou console
+    # (terminal) — l'interface branchera sa propre boîte à son tour.
+    verrous.append({
+        "cle": "confirmation_web",
+        "titre": "Confirmation navigateur",
+        "ok": CONFIRMATION_BRANCHEE.is_set(),
+        "detail": ("branchée — l'avis humain passe par le navigateur, refus "
+                   "après 120 s sans réponse"
+                   if CONFIRMATION_BRANCHEE.is_set() else
+                   "non branchée : en mode bureau c'est la fenêtre Tkinter "
+                   "qui pose la question, en console c'est le terminal"),
+        "source": "interface/panneau.py",
     })
     return {"verrous": verrous,
             "actifs": sum(1 for v in verrous if v.get("ok")),
@@ -452,6 +507,15 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                 self._json({"erreur": str(e)[:200]}, 503)
         elif route == "/api/securite":
             self._json(_etat_securite())
+        elif route == "/api/confirmation":
+            # Demande de confirmation la plus ancienne en attente (ou aucune).
+            # La page la sonde à chaque seconde pour afficher la boîte modale.
+            with _VERROU_CONFIRMATION:
+                attente = next((d for d in _CONFIRMATIONS
+                                if d["reponse"] is None), None)
+            self._json({"demande": None if attente is None else
+                        {"id": attente["id"], "nom": attente["nom"],
+                         "detail": attente["detail"]}})
         elif route == "/api/voix/etat":
             # Exposé en GET : la page fait fetch("/api/voix/etat") pour masquer
             # le bouton Voix quand aucune voix n'est installée. Cette route
@@ -558,6 +622,28 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                 return
             message = a.reprendre(sid)
             self._json({"ok": "introuvable" not in message, "message": message})
+            return
+        if route == "/api/confirmation/repondre":
+            # Réponse humaine de la boîte modale du navigateur.
+            try:
+                taille = min(int(self.headers.get("Content-Length", 0) or 0), 8000)
+                corps = json.loads(self.rfile.read(taille) or b"{}")
+            except (ValueError, json.JSONDecodeError, OSError):
+                self._json({"ok": False, "erreur": "requête invalide"}, 400)
+                return
+            ident = str(corps.get("id", ""))
+            accepte = bool(corps.get("accepte", False))
+            with _VERROU_CONFIRMATION:
+                cible = next((d for d in _CONFIRMATIONS
+                              if d["id"] == ident and d["reponse"] is None), None)
+                if cible is not None:
+                    cible["reponse"] = accepte
+            if cible is None:
+                self._json({"ok": False,
+                            "erreur": "demande introuvable ou déjà tranchée"}, 404)
+                return
+            cible["evenement"].set()
+            self._json({"ok": True, "accepte": accepte})
             return
         if route != "/api/message":
             self._json({"erreur": "introuvable"}, 404)
