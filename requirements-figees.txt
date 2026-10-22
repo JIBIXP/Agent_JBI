@@ -1,7 +1,10 @@
 # JIBI 2 — versions EXACTES installées par pip pour requirements.txt.
-# Résolu sous Python 3.12, le 2026-10-22, dans un venv isolé :
+# Résolu sous Windows / Python 3.12, le 2026-10-22, dans un venv isolé :
 # ne pas éditer à la main. Pour régénérer : installer requirements.txt
 # dans un venv neuf puis lancer « pip freeze ».
+# ATTENTION : fige TOUTE LA TRANSITIVE d'une installation Windows —
+# il contient pywin32/colorama : non portable vers Linux/macOS. La CI
+# installe requirements.txt (le loose), pas ce verrou.
 aiofiles==25.1.0
 aiohappyeyeballs==2.7.1
 aiohttp==3.14.3
