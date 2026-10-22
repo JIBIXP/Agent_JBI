@@ -15,7 +15,7 @@ _fichier_analyse = config.DOSSIER_FICHIERS / "_analyse_test.txt"
 _fichier_analyse.write_text("une ligne de test\nune autre ligne de test\n", encoding="utf-8")
 _analyse = _analyse34.analyser_fichier(_fichier_analyse.name)
 verif("analyse : statistiques de fichier", "SHA-256" in _analyse and "Mots : 9" in _analyse, _analyse[:120])
-_fichier_analyse.unlink(missing_ok=True)
+_supprimer_tolerant(_fichier_analyse)
 _excel_test = config.DOSSIER_FICHIERS / "_budget_test.xlsx"
 _creation_excel = _bureau34.creer_excel(_excel_test.name,
                                        '[["Poste","Montant"],["Loyer",850]]')
@@ -23,7 +23,7 @@ _analyse_excel = _bureau34.analyser_excel(_excel_test.name)
 verif("bureautique : Excel créé et analysé",
       "Excel créé" in _creation_excel and "Dimensions" in _analyse_excel,
       _analyse_excel[:100])
-_excel_test.unlink(missing_ok=True)
+_supprimer_tolerant(_excel_test)
 _ancien_get = _web34._get
 _web34._get = lambda *args, **kwargs: '{"city":"Rennes","region":"Bretagne","country_name":"France","timezone":"Europe/Paris"}'
 try:

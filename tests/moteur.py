@@ -101,4 +101,22 @@ class _AssistantFaux:
 assistant = None
 
 
+def _supprimer_tolerant(chemin: Path) -> None:
+    """Supprime un fichier de test, verrou passager inclus.
+
+    Sur les runners CI, l'antivirus tient parfois un fichier (xlsx
+    particulièrement) quelques centaines de ms après sa création :
+    PermissionError au unlink. On réessaie brièvement ; en dernier
+    recours on laisse le fichier (de test, recréé au prochain passage).
+    """
+    import time as module_temps  # là, pour ne pas alourdir le préludé
+
+    for _essai in range(6):
+        try:
+            chemin.unlink(missing_ok=True)
+            return
+        except PermissionError:
+            module_temps.sleep(0.3)
+
+
 __all__ = list(n for n in globals() if not n.startswith("__"))
