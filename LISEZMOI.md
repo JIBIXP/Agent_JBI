@@ -14,7 +14,7 @@ JIBI2/
 ├── requirements.txt     ← installateur simple (pip install -r)
 ├── requirements-figees.txt ← versions exactes résolues (verrou, Windows/3.12)
 ├── mcp_server.py        ← serveur MCP local : liste blanche, double contrôle, jeton
-├── tests/               ← suite hors-ligne : 39 modules mNN + moteur + 244 contrôles
+├── tests/               ← suite hors-ligne : 39 modules mNN + moteur + 249 contrôles
 ├── .github/workflows/ci.yml ← CI : Windows, Python 3.13 (bloquant) + 3.14
 ├── ruff.toml            ← lint ciblé (F821/F811/F822 dans la CI)
 ├── jibi2/               ← le noyau
@@ -179,7 +179,7 @@ Dans la console :
 
 ## Qualité : suite complète, CI, verrou de dépendances
 
-- **La suite hors-ligne** (`tests/verification.py`) : **244 contrôles**, sans
+- **La suite hors-ligne** (`tests/verification.py`) : **249 contrôles**, sans
   réseau, sans Ollama, sans micro ; scopée en 39 modules (`tests/mNN_*.py`)
   + `tests/moteur.py` (préludé partagé), chaque module lancé seul ;
   `tests/test_suite.py` est l'entrée pytest. La CI exécute
