@@ -5,5 +5,10 @@ modeles/voix/*.onnx
 modeles/voix/*.onnx.json
 .env
 
+# ECC (plugin OpenCode) — dépendances Node locales
+node_modules/
+package.json
+package-lock.json
+
 .freebuff/
 mobile_backup/
