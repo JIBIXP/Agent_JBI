@@ -337,16 +337,6 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                     for role, contenu in a.memoire.messages_de(sid)[-80:]:
                         messages.append({"role": role, "texte": _normaliser_texte(contenu)})
             self._json({"session": sid, "messages": messages})
-        elif route == "/api/session/ouvrir" and self.command == "POST":
-            a = _assurer_assistant()
-            try:
-                taille = min(int(self.headers.get("Content-Length", 0) or 0), 1000)
-                sid = int(json.loads(self.rfile.read(taille) or b"{}").get("id"))
-            except (ValueError, json.JSONDecodeError):
-                self._json({"erreur": "identifiant invalide"}, 400)
-                return
-            message = a.reprendre(sid)
-            self._json({"ok": "introuvable" not in message, "message": message})
         elif route == "/api/documents":
             self._json({"documents": _documents()})
         elif route == "/api/securite":
@@ -443,6 +433,17 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                             "voix": parole.voix_actuelle()})
             except Exception:
                 self._json({"disponible": False, "voix": "aucune"})
+            return
+        if route == "/api/session/ouvrir":
+            a = _assurer_assistant()
+            try:
+                taille = min(int(self.headers.get("Content-Length", 0) or 0), 1000)
+                sid = int(json.loads(self.rfile.read(taille) or b"{}").get("id"))
+            except (ValueError, json.JSONDecodeError):
+                self._json({"erreur": "identifiant invalide"}, 400)
+                return
+            message = a.reprendre(sid)
+            self._json({"ok": "introuvable" not in message, "message": message})
             return
         if route != "/api/message":
             self._json({"erreur": "introuvable"}, 404)
