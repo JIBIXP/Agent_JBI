@@ -24,10 +24,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
-    # 3.13 signalé mais non bloquant : certaines dépendances optionnelles
-    # n'y sont pas encore assises ;
-    continue-on-error: ${{ matrix.python-version == '3.13' }}
+        # Version suivie : 3.13 (stable, bloquant) — et 3.14 en touche.
+        python-version: ["3.13", "3.14"]
+    continue-on-error: ${{ matrix.python-version == '3.14' }}
     env:
       PYTHONIOENCODING: "utf-8"
       PYTHONUTF8: "1"
@@ -51,7 +50,20 @@ jobs:
         run: ruff check . --select F821,F811,F822
 
       - name: Suite de vérification hors-ligne
-        run: python tests/verification.py
+        # En cas d'échec, les dernières lignes du journal sont re-émises en
+        # annotations d'erreur : rien de secret (la suite est hors-ligne et
+        # n'imprime que ses vérifications), mais lisible publiquement.
+        shell: pwsh
+        run: |
+          $sortie = (& python -X utf8 tests\verification.py 2>&1 | Out-String)
+          Write-Host $sortie
+          if ($LASTEXITCODE -ne 0) {
+            foreach ($l in ($sortie.TrimEnd() -split "`r?`n" | Select-Object -Last 14)) {
+              $court = if ($l.Length -gt 150) { $l.Substring($l.Length - 150) } else { $l }
+              Write-Host "::error::$court"
+            }
+            exit 1
+          }
 
       - name: Aucun secret dans le dépôt (longueur de .env)
         shell: pwsh
