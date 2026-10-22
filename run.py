@@ -65,6 +65,9 @@ def lancer_mcp() -> None:
                 self.wfile.write(json.dumps(response).encode())
 
             def log_message(self, format, *args):
+                # Volontairement vide (SonarQube S1186) : on écrase le logging
+                # par défaut de http.server — un serveur MCP local qui reçoit
+                # des requêtes de polling ne doit pas noyer la console JIBI.
                 pass
 
         httpd = http.server.HTTPServer(("127.0.0.1", port), Handler)
