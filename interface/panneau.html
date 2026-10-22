@@ -60,6 +60,10 @@ body{
 #principal.mode-tableau header,
 #principal.mode-tableau footer,
 #principal.mode-tableau #raccourcis{display:none}
+/* ancre de place : quand header/footer/raccourcis sont masqués en plein cadre,
+   le navigateur auto-place la page visible sur la PREMIÈRE ligne (hauteur 0).
+   L'épingler sur la ligne 2 (1fr) garde le tableau de bord plein écran. */
+#principal.mode-tableau .page.visible{grid-row:2}
 
 /* ══ barre latérale ═══════════════════════════════════════════════════ */
 aside{min-width:0;display:flex;flex-direction:column;background:var(--carte);
