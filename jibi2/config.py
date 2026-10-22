@@ -99,6 +99,7 @@ DEFAUTS = {
     "JIBI_CLOUD_MODEL": "deepseek/deepseek-chat",
     "JIBI_CLOUD_MODEL_ANTHROPIC": "claude-sonnet-4-20250514",
     "JIBI_CLOUD_MODEL_OPENCODE": "",      # vide = modèle opencode par défaut
+    "JIBI_OPENCODE_CHEMIN": "",           # path opencode-cli.exe si pas sur le PATH
     "OPENROUTER_API_KEY": "",
     "ANTHROPIC_API_KEY": "",
     # --- Sécurité -----------------------------------------------------------

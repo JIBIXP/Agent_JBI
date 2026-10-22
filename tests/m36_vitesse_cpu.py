@@ -103,6 +103,13 @@ finally:
         dict_cloud2["JIBI_CLOUD_MARQUE"] = "opencode"
         verif("opencode : commande absente → porte close",
               module_llm.fabrique_cloud() is None and module_llm.cloud_actif() is False)
+        # Chemin imposé (JIBI_OPENCODE_CHEMIN) : prime sur le PATH absent.
+        dict_cloud2["JIBI_OPENCODE_CHEMIN"] = __file__
+        _oc_chemin = module_llm.fabrique_cloud()
+        verif("opencode : chemin imposé trouvé, client prêt",
+              isinstance(_oc_chemin, module_llm.ClientOpenCode)
+              and _oc_chemin.disponible())
+        dict_cloud2["JIBI_OPENCODE_CHEMIN"] = ""
         module_llm.shutil.which = lambda c: r"C:\faux\opencode.exe"
         _oc = module_llm.fabrique_cloud()
         verif("opencode : marque opencode + CLI présente → ClientOpenCode",

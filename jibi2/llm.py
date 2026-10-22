@@ -18,6 +18,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 from . import config
 
@@ -355,8 +356,15 @@ class ClientOpenCode:
     def __init__(self, modele: str | None = None) -> None:
         self.modele = modele or config.valeur("JIBI_CLOUD_MODEL_OPENCODE", "")
 
+    def _exe(self) -> str | None:
+        """Le CLI opencode : chemin imposé (JIBI_OPENCODE_CHEMIN) ou PATH."""
+        impose = config.valeur("JIBI_OPENCODE_CHEMIN", "").strip()
+        if impose and Path(impose).is_file():
+            return impose
+        return shutil.which(self.COMMANDE)
+
     def disponible(self) -> bool:
-        return shutil.which(self.COMMANDE) is not None
+        return self._exe() is not None
 
     @staticmethod
     def _prompt(messages: list[dict]) -> str:
@@ -378,7 +386,8 @@ class ClientOpenCode:
 
     def _executer(self, prompt: str) -> str:
         import subprocess
-        commande = [shutil.which(self.COMMANDE) or self.COMMANDE, "run"]
+        exe = self._exe()
+        commande = [exe or self.COMMANDE, "run"]
         if self.modele:
             commande += ["--model", self.modele]
         commande.append(prompt)
