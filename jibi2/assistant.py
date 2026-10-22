@@ -9,6 +9,13 @@ Protocole (simple et robuste, testé avec qwen3.5) :
   3. chaque résultat d'outil est renvoyé au modèle pour la phrase finale ;
   4. si Ollama est éteint → repli local par mots-clés (heure, calcul,
      note, recherche, ouvrir) pour les cas de base.
+
+Les réponses autonomes spécialisées sont extraites dans des rails :
+  - rails_documents.py : tableau, dessin, documents, export, livraison ;
+  - rails_cours.py     : cours/exposé (recherche, rédaction, document) ;
+  - rails_chrome.py    : Chrome/Google headless et sujets en attente.
+Le contrat des rails : leurs noms restent importables depuis
+assistant (ré-export explicite), comportement identique.
 """
 from __future__ import annotations
 
@@ -141,8 +148,6 @@ def _reponse_outil(nom: str, parametres: dict, garde) -> dict:
 CORRECTIF = ("Ta réponse précédente n'était pas un JSON valide : « {extrait} ». "
              "Réponds UNIQUEMENT avec un JSON : {{\"outil\": \"nom\", \"parametres\": {{...}}}} "
              "ou {{\"reponse\": \"...\"}}.")
-
-
 
 
 class Assistant:
