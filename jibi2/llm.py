@@ -351,7 +351,8 @@ class ClientOpenCode:
     """
 
     COMMANDE = "opencode"
-    TIMEOUT = 600
+    TIMEOUT = 180          # 3 min dures : passé 10 min, le panneau entier restait
+                           # gelé derrière le verrou de conversation (faille PF).
 
     def __init__(self, modele: str | None = None) -> None:
         self.modele = modele or config.valeur("JIBI_CLOUD_MODEL_OPENCODE", "")
@@ -395,7 +396,7 @@ class ClientOpenCode:
             fait = subprocess.run(commande, capture_output=True,
                                   timeout=self.TIMEOUT)
         except subprocess.TimeoutExpired as e:
-            raise ErreurLLM("OpenCode n'a pas répondu dans les temps (10 min).") from e
+            raise ErreurLLM("OpenCode n'a pas répondu dans les temps (3 min).") from e
         except OSError as e:
             raise ErreurLLM(f"Impossible de lancer OpenCode : {e}") from e
         if fait.returncode != 0:

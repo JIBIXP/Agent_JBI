@@ -676,7 +676,15 @@ class _Gestionnaire(BaseHTTPRequestHandler):
             if not texte:
                 self._json({"reponse": "Dis-moi quelque chose d'abord.", "actions": []})
                 return
-            with _VERROU:                      # un échange à la fois
+            # Le verrou ne doit JAMAIS rester invisible pour l'humain : si un
+            # échange est déjà en cours (et éventuellement coincé dans un
+            # appel long), on répond tout de suite au lieu de laisser le
+            # navigateur conclure à tort « serveur injoignable ».
+            if not _VERROU.acquire(timeout=2.0):
+                self._json({"reponse": "Je suis déjà en train de réfléchir à ta demande précédente — renvoie ta question dans un instant, ou dis-moi « arrête ».",
+                            "actions": []}, 200)
+                return
+            try:
                 # Signale l'activité : les modes autonomes « seuls » attendent le silence.
                 try:
                     from jibi2 import exploration
@@ -689,6 +697,8 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                 except Exception:
                     pass
                 resultat = _assurer_assistant().repondre(texte)
+            finally:
+                _VERROU.release()
             self._json({"reponse": _normaliser_texte(_texte_sans_boucle(resultat.get("reponse", ""))),
                         "actions": resultat.get("actions", [])})
         except Exception as e:  # noqa: BLE001
