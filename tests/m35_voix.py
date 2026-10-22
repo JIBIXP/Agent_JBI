@@ -41,9 +41,17 @@ try:
 finally:
     _parole30.parler = _orig30
 
+# le .env peut ne pas exister sur une installation fraîche (CI) : on repart
+# d'un tampon neutre à l'identique du répertoire réel, retiré à la fin.
+_env_absent = not Path(".env").exists()
+if _env_absent:
+    Path(".env").write_text("PIPER_MODELE=\n", encoding="utf-8")
+
 _env_avant = (Path(".env").read_text(encoding="utf-8"), Path(".env").stat().st_size)
 _ecrire_env("PIPER_MODELE", "essai")
 _ecrire_env("PIPER_MODELE", "")
 _apres = Path(".env").read_text(encoding="utf-8")
 verif("voix : .env réécrit proprement (rien de perdu)",
       _apres == _env_avant[0] and Path(".env").stat().st_size == _env_avant[1])
+if _env_absent:
+    Path(".env").unlink(missing_ok=True)   # CI sans .env : tampon retiré
