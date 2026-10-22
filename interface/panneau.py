@@ -141,9 +141,12 @@ def _etat_securite() -> dict:
                   and config.valeur_bool("JIBI_AUTONOMIE_NOYAU"))
     deplacement = not config.valeur_bool("CONFIRMER_DEPLACEMENT")
     mcp_actif = config.valeur_bool("JIBI_MCP")
+    # nature : « protection » (vert = fermé = bien) ou « permission »
+    # (ambre = active par le choix explicite de l'utilisateur — pas une alerte).
     verrous: list[dict] = [
         {"cle": "confirmer",
          "titre": "Confirmation des risques",
+         "nature": "protection",
          "ok": confirmer,
          "detail": ("CONFIRMER_RISQUES=1 — aucune action à risque élevé ne "
                     "passe sans accord" if confirmer else
@@ -151,15 +154,23 @@ def _etat_securite() -> dict:
                     "tout risque élevé passe"),
          "source": ".env · jibi2/securite.py"},
         {"cle": "garde",
-         "titre": "Garde sans interface",
-         "ok": garde.est_permissive_par_defaut(),
-         "detail": ("refuse par défaut quand aucune interface ne peut te "
-                    "demander ton avis"
-                    if garde.est_permissive_par_defaut() else
-                    "une interface a branché sa propre boîte de confirmation"),
+         "titre": "Boîte de confirmation",
+         "nature": "protection",
+         # ok = une interface peut réellement poser la question à l'humain
+         # (fenêtre Tk, terminal ou boîte web). Le défaut de la Garde —
+         # sans interface — est PERMISSIF, ce n'est PAS un état sûr.
+         "ok": (not garde.est_permissive_par_defaut()
+                or CONFIRMATION_BRANCHEE.is_set()),
+         "detail": ("branchée — une interface pose la question ; sans réponse "
+                    "dans 120 s, refus"
+                    if (not garde.est_permissive_par_defaut()
+                        or CONFIRMATION_BRANCHEE.is_set()) else
+                    "AUCUNE boîte branchée : les actions à confirmer passent "
+                    "sans avis humain"),
          "source": "jibi2/securite.py"},
         {"cle": "modif_auto",
-         "titre": "Auto-modification du noyau",
+         "titre": "Auto-amélioration du noyau",
+         "nature": "permission",
          "ok": not modif_auto,
          "detail": ("désactivée — JIBI ne réécrit pas son noyau tout seul"
                     if not modif_auto else
@@ -168,12 +179,14 @@ def _etat_securite() -> dict:
          "source": ".env · jibi2/securite.py"},
         {"cle": "deplacement",
          "titre": "Déplacements de fichiers",
+         "nature": "permission",
          "ok": not deplacement,
          "detail": ("confirmés" if not deplacement else
                     "CONFIRMER_DEPLACEMENT=0 — déplacés sans demander"),
          "source": ".env"},
         {"cle": "local",
          "titre": "Requêtes locales",
+         "nature": "protection",
          "ok": True,
          "detail": ("socket, en-tête Host, X-Forwarded-* et Origin vérifiés "
                     "sur chaque requête"),
@@ -184,6 +197,7 @@ def _etat_securite() -> dict:
         verrous.append({
             "cle": "noyau",
             "titre": "Noyau verrouillé",
+            "nature": "protection",
             "ok": (".env" in _noyau.INTERDITS_TOUJOURS
                    and "donnees/" in _noyau.INTERDITS_TOUJOURS),
             "detail": f"{len(_noyau.PERMIS)} motifs autorisés, "
@@ -214,6 +228,7 @@ def _etat_securite() -> dict:
         verrous.append({
             "cle": "mcp_liste",
             "titre": "MCP — liste blanche",
+            "nature": "protection",
             "ok": liste_ok,
             "detail": (f"{exposes} outils exposés sur {total}"
                        if liste_ok else raison),
@@ -223,6 +238,7 @@ def _etat_securite() -> dict:
         verrous.append({
             "cle": "mcp_jeton",
             "titre": "Jeton MCP",
+            "nature": "protection",
             "ok": jeton_present or not mcp_actif,
             "detail": ("X-JIBI-Token exigé, comparaison à temps constant"
                        if jeton_present else
@@ -233,6 +249,7 @@ def _etat_securite() -> dict:
         verrous.append({
             "cle": "mcp_actif",
             "titre": "Serveur MCP",
+            "nature": "permission",
             "ok": not mcp_actif,
             "detail": ("désactivé (JIBI_MCP=0) : aucun port ouvert"
                        if not mcp_actif else
@@ -256,6 +273,7 @@ def _etat_securite() -> dict:
     verrous.append({
         "cle": "cloud",
         "titre": "Cerveau distant",
+        "nature": "permission",
         "ok": cloud_ok,
         "detail": ("désactivé — tout reste sur ce PC"
                    if cloud_ok else
@@ -269,6 +287,7 @@ def _etat_securite() -> dict:
     verrous.append({
         "cle": "confirmation_web",
         "titre": "Confirmation navigateur",
+        "nature": "protection",
         "ok": CONFIRMATION_BRANCHEE.is_set(),
         "detail": ("branchée — l'avis humain passe par le navigateur, refus "
                    "après 120 s sans réponse"

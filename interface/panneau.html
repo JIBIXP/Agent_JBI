@@ -277,6 +277,11 @@ footer{padding:8px 26px 18px}
 .tb-rail::-webkit-scrollbar-thumb{background:#2a2f2c;border-radius:4px}
 /* les cartes sœurs s'effacent au survol (Jarvis :has()) */
 .tb-rail:has(> .tb-carte:hover) > .tb-carte:not(:hover){opacity:.72}
+/* rail en GRILLE : tuiles égales et lisibles, qui s'ajustent à la place
+   disponible au lieu de s'écraser à 60 px quand il y en a beaucoup. */
+.tb-rail.grille{display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));
+  gap:14px;overflow:visible;padding-bottom:0}
+.tb-rail.grille .tb-carte{flex:none;min-height:134px}
 
 .tb-carte{--carte-accent:var(--accent);--zoom:1.04;
   position:relative;overflow:hidden;min-width:0;flex:1 1 0;
@@ -492,7 +497,7 @@ footer{padding:8px 26px 18px}
 
         <section class="tb-rangee">
           <h2>Sécurité <span>état lu en direct sur /api/securite</span></h2>
-          <div class="tb-rail" id="tb-securite"><div class="vide">Lecture des verrous…</div></div>
+          <div class="tb-rail grille" id="tb-securite"><div class="vide">Lecture des verrous…</div></div>
         </section>
 
         <section class="tb-rangee">
@@ -904,24 +909,34 @@ async function rendreSecurite(){
   const verrous=d.verrous||[];
   const ICONES={confirmer:"bouclier",garde:"cadenas",modif_auto:"cle",deplacement:"doc",
                 local:"oeil",noyau:"cadenas",mcp_liste:"cle",mcp_jeton:"etiquette",
-                mcp_actif:"eclair",mcp:"eclair",cloud:"reseau"};
-  const cartes=verrous.map(v=>({
-    accent:v.ok?"a-vert":"a-rouge",
-    icone:ICONES[v.cle]||"bouclier",
-    titre:v.titre,
-    valeur:v.ok?"Verrouillé":"Ouvert",
-    detail:nettoyer(v.detail)+(v.source?` <code>${nettoyer(v.source)}</code>`:""),
-    ko:!v.ok,
-  }));
+                mcp_actif:"eclair",mcp:"eclair",cloud:"reseau",confirmation_web:"cadenas"};
+  const cartes=verrous.map(v=>{
+    const permission=v.nature==="permission";
+    return{
+      accent:v.ok?"a-vert":(permission?"a-ambre":"a-rouge"),
+      icone:ICONES[v.cle]||"bouclier",
+      titre:v.titre,
+      /* permission active = un choix assumé (ambre), pas une alerte (rouge) */
+      valeur:permission?(v.ok?"Désactivé":"Actif (choix)")
+                        :(v.ok?"Verrouillé":"Ouvert"),
+      detail:nettoyer(v.detail)+(v.source?` <code>${nettoyer(v.source)}</code>`:""),
+      ko:!v.ok&&!permission,
+    };
+  });
+  const protections=verrous.filter(v=>v.nature!=="permission");
+  const permissions=verrous.filter(v=>v.nature==="permission");
+  const fermees=protections.filter(v=>v.ok).length;
+  const permActives=permissions.filter(v=>!v.ok).length;
   cartes.unshift({
-    accent:(d.actifs===d.total)?"a-jade":"a-rouge",
-    icone:"bouclier",titre:"Verrous actifs",
-    valeur:d.actifs,unite:"/ "+d.total,
-    detail:d.actifs===d.total
-      ? "tout est fermé — chaque verrou a son assertion dans <code>tests/verification.py</code>"
-      : "<b>au moins un verrou est ouvert</b> — regarde les cartes en rouge",
-    jauge:d.total?100*d.actifs/d.total:0,
-    ko:d.actifs!==d.total,
+    accent:(fermees===protections.length)?"a-jade":"a-rouge",
+    icone:"bouclier",titre:"Protections",
+    valeur:fermees,unite:"/ "+protections.length,
+    detail:(fermees===protections.length
+      ? "toutes les protections sont fermées — chaque verrou a son assertion dans <code>tests/verification.py</code>"
+      : "<b>"+(protections.length-fermees)+" protection(s) ouverte(s)</b> — regarde les cartes rouges")
+      +(permActives?" · "+permActives+" permission(s) active(s) par ton choix (ambre)":""),
+    jauge:protections.length?100*fermees/protections.length:0,
+    ko:fermees!==protections.length,
   });
   monterRail("tb-securite",cartes);
 }
