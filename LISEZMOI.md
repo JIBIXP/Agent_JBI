@@ -8,11 +8,22 @@ Ollama pour le cerveau, tout tourne sur ton PC, configuration par `.env`.
 JIBI2/
 ├── run.py               ← point d'entrée unique (fenêtre, console, mains-libres)
 ├── docteur.py           ← vérifie tout + --installer-voix + --modele
-├── .env                 ← configuration (modèle, voix, sécurité)
+├── .env                 ← configuration (modèle, voix, sécurité) — JAMAIS commité
+├── .env.exemple         ← modèle de configuration à copier (sans secrets)
+├── pyproject.toml       ← méta-projet : Python ≥ 3.12, groupes de dépendances
+├── requirements.txt     ← installateur simple (pip install -r)
+├── requirements-figees.txt ← versions exactes résolues (verrou, Windows/3.12)
+├── mcp_server.py        ← serveur MCP local : liste blanche, double contrôle, jeton
+├── tests/               ← suite hors-ligne : 39 modules mNN + moteur + 233 contrôles
+├── .github/workflows/ci.yml ← CI : Windows, Python 3.13 (bloquant) + 3.14
+├── ruff.toml            ← lint ciblé (F821/F811/F822 dans la CI)
 ├── jibi2/               ← le noyau
 │   ├── config.py          lecture .env (sans dépendance), chemins
 │   ├── llm.py             client Ollama (think off, streaming, erreurs en français)
-│   ├── assistant.py       le cerveau : JSON outil/réponse + relance corrective
+│   ├── assistant.py       le cerveau : protocole JSON, voie rapide, classe Assistant
+│   ├── rails_documents.py tableau/dessin/documents/export/livraison (extrait verbatim)
+│   ├── rails_cours.py     cours/exposé autonome : recherche, rédaction, document
+│   ├── rails_chrome.py    Chrome/Google headless + sujets en attente
 │   ├── memoire.py         SQLite : sessions, messages, notes, faits
 │   ├── evolution.py       auto-amélioration : proposer, tester, activer, CHANGELOG
 │   ├── autonomie.py       cycle d'apprentissage web + noyau transactionnel
@@ -21,8 +32,9 @@ JIBI2/
 │   ├── audit.py           journal append-only et chaîne de hachage
 │   ├── labo.py            bac à sable (10 s, processus séparé) + politique AST
 │   ├── planificateur.py   workflows programmés (« chaque jour à 08:00 »)
+│   ├── http_local.py      serveur web local : DNS rebinding, CSRF, tunnel → refusés
 │   └── securite.py        garde des actions sensibles + autonomie du code
-├── outils/              ← 111 outils (18 catégories), jeu adaptatif : noyau 24 + extension par mots-clés
+├── outils/              ← 123 outils (17 catégories), jeu adaptatif : noyau 24 + extension par mots-clés
 │   ├── fichiers.py (8)  systeme.py (10)  applications.py (2)  web.py (5)
 │   ├── notes.py (4)     memoire_faits.py (2)  calcul.py (1)  rappels.py (3)
 │   ├── workflows.py (4) : routines, exécutables à heure fixe (« ⏰ 08:00 »)
@@ -67,11 +79,14 @@ JIBI2/
 ```
 
 **JIBI 2 est réglé pour un PC SANS GPU : tout tourne sur le CPU.**
+- Python **3.12 au minimum** (le métrique du projet, `pyproject.toml`) ;
+  **3.13 recommandé** (version bloquante de la CI), 3.14 aussi validé.
 - Modèle : `qwen3.5:4b` si ≥ 16 Go de RAM, sinon `qwen3.5:2b`
   (`python docteur.py --modele`). `JIBI_LLM_THINK=0` est essentiel sur CPU.
 - Micro : whisper `small` en `int8` (défaut). Évite `medium`, très lent sans GPU.
 - Voix : Piper tourne très bien sur CPU (~1 s de synthèse pour 5 s d'audio).
-Ollama doit être récent (≥ 0.12) pour qwen3.5.
+Ollama ≥ 0.40 recommandé pour qwen3.5 (les versions récentes apportent
+les correctifs Windows et le speculative decoding).
 
 ## Usage
 
@@ -161,6 +176,26 @@ Dans la console :
 2. ~~Niveaux de risque N1/N2/N3 par outil~~ — **fait** : voir
    « Permissions N1/N2/N3 » ci-dessous.
 3. La boule réagit à la voix (visualisation du niveau sonore en direct).
+
+## Qualité : suite complète, CI, verrou de dépendances
+
+- **La suite hors-ligne** (`tests/verification.py`) : **233 contrôles**, sans
+  réseau, sans Ollama, sans micro ; scopée en 39 modules (`tests/mNN_*.py`)
+  + `tests/moteur.py` (préludé partagé), chaque module lancé seul ;
+  `tests/test_suite.py` est l'entrée pytest. La CI exécute
+  `python tests/verification.py` et exige 0 échec.
+- **CI GitHub Actions** (`.github/workflows/ci.yml`) : sur `windows-latest`,
+  **Python 3.13 (bloquant) + 3.14 (touche)** — compilation intégrale, lint
+  ciblé (`ruff : F821/F811/F822`), suite complète, « aucun secret dans le
+  dépôt » (le `.env` ne doit pas être commité). En cas d'échec, les
+  dernières lignes du journal sont re-émises en annotations lisibles.
+- **Verrou de dépendances** : `requirements.txt` reste l'installateur simple ;
+  `requirements-figees.txt` fige les versions exactes (résolues dans un
+  venv neuf, Windows/3.12 — non portable) ; `pyproject.toml` déclare
+  Python ≥ 3.12 et les groupes optionnels (voix, vision, web, documents,
+  navigateur).
+- **Sécurité CI** : `browser-use` épinglé Python ≥ 3.11 (marqueur d'environnement) ;
+  aucun secret dans le dépôt, aucun jeton nécessaire.
 
 ## Permissions N1/N2/N3 (jibi2/securite.py)
 
@@ -388,7 +423,7 @@ turc, vietnamien, thaï.
 - Images : `voir_image` avec modèle de vision local (moondream)
 
 ### Jeu adaptatif étendu
-111 outils dans 18 catégories. NOYAU = 24 outils essentiels toujours visibles.
+123 outils dans 17 catégories. NOYAU = 24 outils essentiels toujours visibles.
 DOMAINES = patterns contextuels qui ajoutent des outils selon le contexte.
 - `/configurer_deplacement` : commande slash pour le toggle de confirmation
 - `/gestionnaire_fichiers` : gestion des dossiers du PC
