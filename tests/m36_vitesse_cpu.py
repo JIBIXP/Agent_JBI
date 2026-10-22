@@ -92,6 +92,45 @@ try:
 finally:
     module_llm.config.valeur = _orig_valeur_cloud
 
+    # Pont OpenCode (`opencode run`) : soumis au même verrou JIBI_CLOUD,
+    # jamais appelé tant que la commande n'existe pas sur le PC.
+    _orig_which = module_llm.shutil.which
+    dict_cloud2: dict[str, str] = {}
+    _orig_valeur_oc = module_llm.config.valeur
+    module_llm.config.valeur = lambda cle, defaut="": dict_cloud2.get(cle, defaut)
+    try:
+        dict_cloud2["JIBI_CLOUD"] = "1"
+        dict_cloud2["JIBI_CLOUD_MARQUE"] = "opencode"
+        verif("opencode : commande absente → porte close",
+              module_llm.fabrique_cloud() is None and module_llm.cloud_actif() is False)
+        module_llm.shutil.which = lambda c: r"C:\faux\opencode.exe"
+        _oc = module_llm.fabrique_cloud()
+        verif("opencode : marque opencode + CLI présente → ClientOpenCode",
+              isinstance(_oc, module_llm.ClientOpenCode) and _oc.disponible())
+        verif("opencode : l'histoire écrasée en un prompt étiqueté",
+              module_llm.ClientOpenCode._prompt(
+                  [{"role": "system", "content": "sois JIBI"},
+                   {"role": "user", "content": "salut"},
+                   {"role": "assistant", "content": "bonjour"},
+                   {"role": "user", "content": "encore"}]).count("[") == 4)
+        # Scénario d'appel réel factice : subprocess.run est stubé pour ne
+        # JAMAIS toucher à une vraie CLI ni à un réseau.
+        class _Fait:
+            returncode, stdout, stderr = 0, "réponse d'OpenCode".encode("utf-8"), b""
+        import subprocess as _subprocess_reel
+        _orig_run = _subprocess_reel.run
+        _subprocess_reel.run = lambda commande, timeout=None, **kw: _Fait()
+        try:
+            verif("opencode : discuter renvoie la réponse sans réseau",
+                  _oc.discuter([{"role": "user", "content": "salut"}])
+                  == "réponse d'OpenCode")
+        finally:
+            _subprocess_reel.run = _orig_run
+    finally:
+        module_llm.shutil.which = _orig_which
+        module_llm.config.valeur = _orig_valeur_oc
+        dict_cloud2.clear()
+
 _grosse = "[Résultat de l'outil lire_page_web] " + "page " * 500
 assistant.histoire = [
     {"role": "user", "content": "résume la page"},

@@ -98,6 +98,7 @@ DEFAUTS = {
     "JIBI_CLOUD_AUTO": "0",                # 1 = complexe → cloud, repli sur panne
     "JIBI_CLOUD_MODEL": "deepseek/deepseek-chat",
     "JIBI_CLOUD_MODEL_ANTHROPIC": "claude-sonnet-4-20250514",
+    "JIBI_CLOUD_MODEL_OPENCODE": "",      # vide = modèle opencode par défaut
     "OPENROUTER_API_KEY": "",
     "ANTHROPIC_API_KEY": "",
     # --- Sécurité -----------------------------------------------------------

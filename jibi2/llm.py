@@ -13,6 +13,7 @@ from __future__ import annotations
 import contextlib
 import json
 import re
+import shutil
 import threading
 import time
 import urllib.error
@@ -334,6 +335,83 @@ class ClientCloud:
 
 
 # ═══════════════════════════════════════════════════════════════════════
+#  Cerveau distant (ter) : OpenCode local — subprocess, zéro SDK
+# ═══════════════════════════════════════════════════════════════════════
+
+class ClientOpenCode:
+    """Cerveau via l'agent OpenCode présent sur le PC (`opencode run`).
+
+    Variante prudente : seule de la conversation est transmise comme PROMPT
+    TEXTE — OpenCode ne lit ni n'écrit vos fichiers depuis ce chemin, et le
+    modèle utilisé est celui configuré dans opencode (par ex. le free GLM).
+    Gravité cloud : la question part sur les serveurs du fournisseur du
+    modèle — c'est pourquoi ce client est soumis au même verrou JIBI_CLOUD
+    (et au même affichage rouge du panneau de sécurité) que les autres.
+    """
+
+    COMMANDE = "opencode"
+    TIMEOUT = 600
+
+    def __init__(self, modele: str | None = None) -> None:
+        self.modele = modele or config.valeur("JIBI_CLOUD_MODEL_OPENCODE", "")
+
+    def disponible(self) -> bool:
+        return shutil.which(self.COMMANDE) is not None
+
+    @staticmethod
+    def _prompt(messages: list[dict]) -> str:
+        """Écrase l'histoire en un seul prompt textuel (une question = un appel)."""
+        lignes: list[str] = []
+        for m in messages:
+            role = m.get("role")
+            contenu = str(m.get("content", "")).strip()
+            if not contenu:
+                continue
+            if role == "system":
+                lignes.append(f"[Consignes] {contenu}")
+            elif role == "assistant":
+                lignes.append(f"[Conversation précédente, JIBI avait répondu] {contenu}")
+            else:
+                lignes.append(f"[Demande] {contenu}")
+        texte = "\n\n".join(lignes)
+        return texte[:20000]  # garde-fou : une ligne de commande a ses limites
+
+    def _executer(self, prompt: str) -> str:
+        import subprocess
+        commande = [shutil.which(self.COMMANDE) or self.COMMANDE, "run"]
+        if self.modele:
+            commande += ["--model", self.modele]
+        commande.append(prompt)
+        try:
+            fait = subprocess.run(commande, capture_output=True,
+                                  timeout=self.TIMEOUT)
+        except subprocess.TimeoutExpired as e:
+            raise ErreurLLM("OpenCode n'a pas répondu dans les temps (10 min).") from e
+        except OSError as e:
+            raise ErreurLLM(f"Impossible de lancer OpenCode : {e}") from e
+        if fait.returncode != 0:
+            raise ErreurLLM(
+                f"OpenCode a échoué (code {fait.returncode}) : "
+                f"{(fait.stderr or fait.stdout or b'').decode('utf-8', errors='replace').strip()[:180]}"
+            )
+        return nettoyer_think(fait.stdout.decode("utf-8", errors="replace")).strip()
+
+    def discuter(self, messages: list[dict], temperature: float = 0.4) -> str:
+        if not self.disponible():
+            raise ErreurLLM("OpenCode introuvable sur ce PC (commande « opencode »).")
+        reponse = self._executer(self._prompt(messages))
+        return reponse
+
+    def discuter_stream(self, messages: list[dict], temperature: float = 0.4,
+                        on_chunk=None) -> str:
+        # RMÇ par le même appel one-shot (pas de vrai streaming via la CLI) :
+        complet = self.discuter(messages, temperature)
+        if on_chunk is not None and complet:
+            on_chunk(complet)
+        return complet
+
+
+# ═══════════════════════════════════════════════════════════════════════
 #  Cerveau distant (bis) : Anthropic — même interface, stdlib uniquement
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -469,7 +547,12 @@ def fabrique_cloud():
     if not config.valeur_bool("JIBI_CLOUD"):
         return None
     marque = (config.valeur("JIBI_CLOUD_MARQUE", "openrouter") or "openrouter").strip().lower()
-    client = ClientAnthropic() if marque == "anthropic" else ClientCloud()
+    if marque == "opencode":
+        client = ClientOpenCode()
+    elif marque == "anthropic":
+        client = ClientAnthropic()
+    else:
+        client = ClientCloud()
     if not client.disponible():
         return None
     return client
