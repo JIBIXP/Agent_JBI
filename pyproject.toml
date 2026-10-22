@@ -1,0 +1,25 @@
+# JIBI 2 — métadonnées du projet (application locale, pas une bibliothèque).
+# Le dépôt est la source : rien à « installer » depuis PyPI.
+# requirements.txt reste l'installateur pratique (pip install -r),
+# requirements-figees.txt verrouille les versions exactes (pip freeze).
+# Les groupes ci-dessous disent AUTRE CHOSE DE PLUS : quelles dépendances
+# servent à quoi (la voix, les documents…), tout reste facultatif.
+
+[project]
+name = "jibi2"
+description = "Assistant personnel 100 % local : aucune donnée ne quitte le PC"
+readme = "LISEZMOI.md"
+# Python minimal : 3.12 (le métrique réel est le fichier VERSION :
+# « ADD 32 (2026-09-24) ») ; la CI assermente 3.13 (bloquant) et 3.14.
+requires-python = ">=3.12"
+version = "32"
+
+# Dépendances optionnelles, par fonction :
+[project.optional-dependencies]
+voix = ["piper-tts>=1.3.0", "faster-whisper", "sounddevice",
+        "SpeechRecognition", "pyttsx3", "numpy"]
+vision = ["pillow"]
+web = ["playwright>=1.40"]
+documents = ["python-docx>=1.1", "openpyxl>=3.1", "python-pptx>=0.6"]
+# browser-use demande Python >= 3.11 (marqueur d'environnement)
+navigateur = ["browser-use>=0.13.10,<0.14 ; python_version >= '3.11'"]
