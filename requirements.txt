@@ -18,5 +18,8 @@ playwright>=1.40
 python-docx>=1.1
 openpyxl>=3.1
 python-pptx>=0.6
+# pypdf : lecture des PDF modernes (flux compressés). Sans lui, l'outillage
+# replie sur un râclage d'octets qui rend du bruit au lieu du texte.
+pypdf>=5
 # Wake-word neuronal (optionnel, léger sur CPU) : pip install openwakeword
 # + un modèle dans modeles/wake/ — sinon détection par transcription.

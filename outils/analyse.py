@@ -64,8 +64,14 @@ def _texte(chemin: Path) -> tuple[str, str]:
             import pypdf  # type: ignore[import-not-found]
             lecteur = pypdf.PdfReader(str(chemin))
             return "\n".join(page.extract_text() or "" for page in lecteur.pages), "PDF"
+        except ImportError:
+            # pypdf manquant : plutôt que racler des octets (les flux des
+            # PDF modernes sont compressés, le résultat est du bruit),
+            # on explique quoi installer — honnête et réparable.
+            return "", ("PDF (pypdf manquant) — lance : pip install pypdf "
+                        "puis relance l'analyse avec pypdf installé")
         except Exception:
-            # Sans dépendance : on extrait les chaînes ASCII/UTF-16 usuelles.
+            # Paquet présent mais texte inextractible (PDF scanné, chiffré…).
             brut = chemin.read_bytes()[:MAX_TEXTE]
             morceaux = re.findall(rb"[ -~]{4,}", brut)
             return "\n".join(m.decode("latin1", "replace") for m in morceaux), "PDF (texte approximatif)"
