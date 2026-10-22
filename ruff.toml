@@ -19,4 +19,9 @@ ignore = [
 
 [lint.per-file-ignores]
 # Les tests utilisent des imports après sys.path.insert (donc « after code »).
-"tests/*" = ["E402"]
+"tests/*" = [
+  "E402", # imports après sys.path.insert
+  "F403", # `from moteur import *` : le préludé partagé du découpage de la suite
+  "F405", # les noms viennent du préludé ; l'exécution de la suite le vérifie
+  "F811", # chaque section peut re-lier un nom déjà fourni par tests/moteur.py
+]
