@@ -96,6 +96,12 @@ class Garde:
         # (console = input, fenêtre = boîte de dialogue).
         self.confirmer: Confirmer = confirmer or (lambda titre, detail: True)
 
+    def est_permissive_par_defaut(self) -> bool:
+        """Vrai tant qu'aucune interface n'a branché SA boîte de confirmation.
+        Le défaut est la lambda de __init__ : autoriser() suit alors la
+        politique N1/N2/N3 sans avis humain autre que les réglages .env."""
+        return getattr(self.confirmer, "__qualname__", "").endswith("<lambda>")
+
     def autoriser(self, nom_outil: str, risque: str, detail: str) -> bool:
         # Si l'auto-amélioration du noyau est activée (deux drapeaux
         # explicites, tests + retour arrière obligatoires), autoriser les

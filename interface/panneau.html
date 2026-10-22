@@ -5,187 +5,381 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>JIBI — console</title>
 <style>
-  :root {
-    --fond:#0c0f0e; --fond2:#101413; --carte:#141a18; --carte2:#1d2623;
-    --champ:#1f2a26; --champ-bord:#31463e; --bord:#263229;
-    --accent:#2fd6a3; --accent2:#7cf0cc; --bleu:#5cc8e8;
-    --texte:#eef2f0; --pur:#ffffff; --gris:#9aa8a2;
-    --vert:#7cf0cc; --orange:#ffc46b; --rouge:#ff8080;
-  }
-  * { box-sizing:border-box; margin:0; }
-  html,body { height:100%; }
-  body { background:var(--fond); color:var(--texte);
-         font:15px/1.55 "Segoe UI",system-ui,sans-serif; overflow:hidden;
-         -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility; }
+/* ════════════════════════════════════════════════════════════════════════
+   JIBI — panneau web local.
 
-  /* ── structure : barre latérale + zone principale ─────────────── */
-  #app { height:100vh; display:grid; grid-template-columns:264px 1fr; }
-  #app.replie { grid-template-columns:0 1fr; }
-  aside { min-width:0; display:flex; flex-direction:column; background:var(--carte);
-          border-right:1px solid var(--bord); overflow:hidden; }
-  #app.replie aside { border-right:none; }
+   Habillage repris de Jarvis (hud.html) : fond à radiaux superposés qui
+   dérive lentement, voile cinéma, cartes à barre d'accent 3 px + halo en
+   coin, rails dont les cartes sœurs s'effacent au survol, entrée en cascade
+   calc(140ms + var(--i) * 50ms), courbe cubic-bezier(.2,.8,.2,1).
 
-  .marque { display:flex; align-items:center; gap:10px; padding:18px 16px 14px; }
-  .orbe { position:relative; width:22px; height:22px; border-radius:50%; flex:0 0 auto;
-          background:radial-gradient(circle at 32% 28%,#fff,#2fd6a3 38%,#0d3a2e 82%);
-          box-shadow:0 0 14px #2fd6a388; transition:background .3s, box-shadow .3s; }
-  .orbe:before,.orbe:after { content:""; position:absolute; inset:-7px; border:1px solid #2fd6a377;
-          border-radius:50%; opacity:0; }
-  body.ecoute .orbe { background:radial-gradient(circle at 32% 28%,#fff,#5cc8e8 38%,#0a3d4a 82%);
-                      box-shadow:0 0 18px #5cc8e8; }
-  body.ecoute .orbe:before { animation:onde 1.35s ease-out infinite; }
-  body.ecoute .orbe:after { animation:onde 1.35s .45s ease-out infinite; border-color:#5cc8e899; }
-  body.reflexion .orbe { background:radial-gradient(circle at 32% 28%,#fff,#ffc46b 38%,#4a3614 82%);
-                         box-shadow:0 0 18px #ffc46b; animation:pulse .9s infinite alternate; }
-  body.parle .orbe { background:radial-gradient(circle at 32% 28%,#fff,#7cf0cc 38%,#0d4d33 82%);
-                     box-shadow:0 0 20px #7cf0cc; animation:parle .75s ease-in-out infinite alternate; }
-  @keyframes pulse { to { transform:scale(1.22); } }
-  @keyframes onde { 0% { transform:scale(.55); opacity:.9; } 100% { transform:scale(2.4); opacity:0; } }
-  @keyframes parle { to { transform:scale(1.15); } }
-  .marque h1 { font-size:17px; letter-spacing:2px; font-weight:700; color:var(--pur); }
-  .marque .sous { color:var(--gris); font-size:11px; letter-spacing:.4px; }
+   Palette : « Charbon & Jade » de JIBI (interface/theme.py), avec un accent
+   par état sur chaque carte — jade, vert, ambre, rouge — sur une base
+   neutre. Les noms --fond, --carte, --accent et --texte sont ceux que
+   outils/design.py réinjecte : « personnaliser_design panneau.accent … »
+   recolorise donc cette page, y compris les dégradés de la bannière.
 
-  .bloc-nav { padding:6px 10px; }
-  .bloc-nav h2 { font-size:10.5px; text-transform:uppercase; letter-spacing:1.4px;
-                 color:var(--gris); margin:14px 8px 6px; font-weight:700; }
-  .lien { display:flex; align-items:center; gap:10px; width:100%; padding:8px 10px;
-          background:transparent; color:var(--gris); border:0; border-radius:10px;
-          cursor:pointer; font:inherit; font-size:13.5px; text-align:left; }
-  .lien:hover { background:var(--carte2); color:var(--texte); }
-  .lien.actif { background:var(--champ); color:var(--accent2); }
-  .lien svg { flex:0 0 auto; width:17px; height:17px; }
+   Aucune ressource externe : pas de police, pas d'image, pas de CDN.
+   ════════════════════════════════════════════════════════════════════════ */
 
-  .sessions { flex:1; min-height:0; overflow-y:auto; padding:2px 10px 10px; }
-  .session { width:100%; text-align:left; background:transparent; border:0; color:var(--gris);
-             font:inherit; font-size:12.5px; padding:7px 10px; border-radius:8px;
-             cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-  .session:hover { background:var(--carte2); color:var(--texte); }
-  .session.actif { background:var(--champ); color:var(--texte); }
-  .pied-aside { padding:10px 12px 14px; border-top:1px solid var(--bord);
-                display:flex; flex-direction:column; gap:8px; }
-  .bouton-secondaire { display:flex; align-items:center; justify-content:center; gap:8px;
-                       width:100%; padding:8px 10px; background:var(--carte2); color:var(--texte);
-                       border:1px solid var(--bord); border-radius:10px; cursor:pointer;
-                       font:inherit; font-size:13px; }
-  .bouton-secondaire:hover { border-color:var(--accent); color:var(--accent2); }
-  .bouton-danger { color:var(--rouge); }
-  .bouton-danger:hover { border-color:var(--rouge); color:var(--rouge); }
+:root{
+  /* ── JIBI : palette existante, noms conservés (design.py les surcharge) ── */
+  --fond:#0c0f0e; --fond2:#101413; --carte:#141a18; --carte2:#1d2623;
+  --champ:#1f2a26; --champ-bord:#31463e; --bord:#263229;
+  --accent:#2fd6a3; --accent2:#7cf0cc; --bleu:#5cc8e8;
+  --texte:#eef2f0; --pur:#ffffff; --gris:#9aa8a2;
+  --vert:#7cf0cc; --orange:#ffc46b; --rouge:#ff8080;
 
-  /* ── zone principale ───────────────────────────────────────────── */
-  #principal { min-width:0; display:grid; grid-template-rows:auto 1fr auto; height:100vh; }
-  header { display:flex; align-items:center; gap:12px; padding:12px 20px;
-           border-bottom:1px solid var(--bord); background:rgba(12,15,14,.85); }
-  #basculer-menu { background:transparent; border:1px solid var(--bord); color:var(--gris);
-                   border-radius:9px; padding:7px 11px; cursor:pointer; font:inherit; font-size:13px; }
-  #basculer-menu:hover { color:var(--texte); border-color:var(--champ-bord); }
-  #titre-page { color:var(--pur); font-size:15px; font-weight:650; letter-spacing:.3px; }
-  #etat { margin-left:auto; color:var(--gris); text-align:right; font-size:12.5px; }
-  #etat b { color:var(--vert); font-weight:600; }
-  #etat b.hors { color:var(--orange); }
+  /* ── Jarvis : structure et mouvement ────────────────────────────────── */
+  --ease-tb:cubic-bezier(.2,.8,.2,1);
+  --tb-marge:clamp(24px,3.4vw,64px);
+  --tb-texte-2:rgba(238,242,240,.70);
+  --tb-texte-3:rgba(238,242,240,.46);
+  --tb-vert:#46d369; --tb-rouge:#ff6b6b;
+  --tb-accent:var(--accent);      /* suit personnaliser_design */
+  --tb-accent-2:var(--bleu);
 
-  .panneau { min-height:0; overflow-y:auto; padding:20px 26px 10px; }
-  .page { display:none; max-width:860px; margin:0 auto; }
-  .page.visible { display:block; }
-  .page h2 { color:var(--pur); font-size:13px; text-transform:uppercase;
-             letter-spacing:1.2px; margin:18px 0 10px; }
-  .page h2:first-child { margin-top:0; }
+  --sans:"Segoe UI Variable Display","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --mono:Consolas,"Cascadia Mono","SF Mono",Menlo,"DejaVu Sans Mono",monospace;
+}
 
-  #fil { display:flex; flex-direction:column; gap:16px; padding:4px 0 12px; }
-  .rangée { display:flex; gap:12px; max-width:92%; }
-  .rangée.moi { align-self:flex-end; flex-direction:row-reverse; }
-  .avatar { flex:0 0 34px; width:34px; height:34px; border-radius:50%; display:flex;
-            align-items:center; justify-content:center; font-weight:700; font-size:13px; }
-  .avatar.jibi { background:radial-gradient(circle at 32% 28%,#fff,#2fd6a3 40%,#0d3a2e 85%);
-                 color:#08251c; box-shadow:0 0 10px #2fd6a344; }
-  .avatar.moi { background:var(--carte2); color:var(--accent2); border:1px solid var(--champ-bord); }
-  .bulle-colonne { min-width:0; display:flex; flex-direction:column; gap:4px; }
-  .nom { font-size:11.5px; color:var(--gris); letter-spacing:.4px; }
-  .rangée.moi .nom { text-align:right; }
-  .bulle { padding:11px 15px; border-radius:14px; white-space:pre-wrap; overflow-wrap:anywhere;
-           line-height:1.55; background:var(--carte); border:1px solid var(--bord); }
-  .rangée.moi .bulle { background:var(--champ); border-color:var(--champ-bord);
-                       border-bottom-right-radius:5px; }
-  .rangée:not(.moi) .bulle { border-bottom-left-radius:5px; }
-  .bulle.systeme { font:12.5px/1.6 Consolas,"Cascadia Mono",monospace; background:var(--fond2);
-                   border-color:var(--bord); }
-  .actions { display:flex; flex-wrap:wrap; gap:6px; }
-  .puce { font-size:11.5px; color:var(--gris); border:1px solid var(--bord);
-          border-radius:20px; padding:2px 10px; }
-  .puce.ok { color:var(--vert); border-color:#2fd6a355; }
-  .puce.ko { color:var(--rouge); border-color:#ff808055; }
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  background:var(--fond); color:var(--texte);
+  font:15px/1.55 var(--sans); overflow:hidden;
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+}
 
-  .carte { background:var(--carte); border:1px solid var(--bord); border-radius:14px;
-           padding:14px 16px; margin-bottom:14px; }
-  .progression { height:8px; background:var(--fond2); border-radius:8px; overflow:hidden; margin:10px 0 8px; }
-  #barre { height:100%; width:0; border-radius:8px;
-           background:linear-gradient(90deg,var(--bleu),var(--accent)); transition:width .35s; }
-  #progression-detail { color:var(--gris); font-size:12.5px; }
-  .document, .signal { display:flex; justify-content:space-between; align-items:center; gap:8px;
-                       padding:8px 0; border-top:1px solid #ffffff0c; }
-  .document:first-of-type,.signal:first-of-type { border-top:0; }
-  .document a { color:var(--bleu); text-decoration:none; font-size:13.5px; overflow-wrap:anywhere; }
-  .document a:hover { text-decoration:underline; }
-  .petit { color:var(--gris); font-size:11.5px; white-space:nowrap; }
-  .signaux { color:var(--texte); font-size:12.5px; line-height:1.7;
-             font-family:Consolas,"Cascadia Mono",monospace; background:var(--fond2);
-             border:1px solid var(--bord); border-radius:10px; padding:10px 12px; }
-  .signaux strong { color:var(--pur); font-weight:700; }
-  #import-fichiers { display:none; }
+/* ══ structure générale ═══════════════════════════════════════════════ */
+#app{height:100vh;display:grid;grid-template-columns:264px 1fr}
+#app.replie{grid-template-columns:0 1fr}
+#principal{min-width:0;display:grid;grid-template-rows:auto 1fr auto;height:100vh;position:relative}
+/* le tableau de bord prend toute la colonne : ni en-tête, ni pied */
+#principal.mode-tableau{grid-template-rows:0 1fr 0}
+#principal.mode-tableau header,
+#principal.mode-tableau footer,
+#principal.mode-tableau #raccourcis{display:none}
 
-  #raccourcis { display:flex; flex-wrap:wrap; gap:7px; padding:4px 26px 10px; }
-  .page-chat ~ #raccourcis {}
-  #raccourcis button { background:var(--carte); color:var(--gris); border:1px solid var(--bord);
-                       border-radius:20px; padding:5px 13px; cursor:pointer; font-size:12.5px;
-                       font-family:inherit; }
-  #raccourcis button:hover { color:var(--accent2); border-color:var(--accent); }
+/* ══ barre latérale ═══════════════════════════════════════════════════ */
+aside{min-width:0;display:flex;flex-direction:column;background:var(--carte);
+      border-right:1px solid var(--bord);overflow:hidden}
+#app.replie aside{border-right:none}
 
-  footer { padding:8px 26px 18px; }
-  .zone-saisie { max-width:860px; margin:0 auto; display:flex; align-items:flex-end; gap:10px;
-                 min-height:54px; max-height:170px; padding:8px 10px 8px 16px;
-                 background:var(--champ); border:1px solid var(--champ-bord); border-radius:16px;
-                 box-shadow:0 -6px 22px #0003; transition:border-color .18s,box-shadow .18s; }
-  .zone-saisie:focus-within { border-color:var(--accent);
-                              box-shadow:0 0 0 3px #2fd6a322,0 -6px 22px #0004; }
-  #saisie { flex:1; min-width:0; min-height:36px; max-height:150px; resize:none;
-            overflow-y:auto; background:transparent; border:0; color:var(--texte);
-            padding:8px 0; font:inherit; line-height:1.5; outline:none; }
-  #saisie::placeholder { color:var(--gris); }
-  .rond { flex:0 0 44px; width:44px; height:44px; padding:0; border:1px solid var(--champ-bord);
-          border-radius:50%; background:var(--carte2); color:var(--texte); cursor:pointer;
-          display:flex; align-items:center; justify-content:center; }
-  .rond svg { width:19px; height:19px; }
-  .rond:hover { border-color:var(--accent); color:var(--accent2); }
-  .rond:disabled { opacity:.4; cursor:default; }
-  #envoyer { background:var(--accent); border-color:var(--accent); color:#08251c; }
-  #envoyer:hover:not(:disabled) { background:var(--accent2); border-color:var(--accent2); color:#08251c; }
-  #envoyer:disabled { background:var(--carte2); color:var(--gris); border-color:var(--bord); }
-  #micro.ecoute { background:#0a3d4a; border-color:var(--bleu); color:var(--bleu);
-                  animation:pulse .9s infinite alternate; }
+.marque{display:flex;align-items:center;gap:10px;padding:18px 16px 14px}
+.orbe{position:relative;width:22px;height:22px;border-radius:50%;flex:0 0 auto;
+      background:radial-gradient(circle at 32% 28%,#fff,#2fd6a3 38%,#0d3a2e 82%);
+      box-shadow:0 0 14px #2fd6a388;transition:background .3s,box-shadow .3s}
+.orbe:before,.orbe:after{content:"";position:absolute;inset:-7px;border:1px solid #2fd6a377;
+      border-radius:50%;opacity:0}
+body.ecoute .orbe{background:radial-gradient(circle at 32% 28%,#fff,#5cc8e8 38%,#0a3d4a 82%);
+      box-shadow:0 0 18px #5cc8e8}
+body.ecoute .orbe:before{animation:onde 1.35s ease-out infinite}
+body.ecoute .orbe:after{animation:onde 1.35s .45s ease-out infinite;border-color:#5cc8e899}
+body.reflexion .orbe{background:radial-gradient(circle at 32% 28%,#fff,#ffc46b 38%,#4a3614 82%);
+      box-shadow:0 0 18px #ffc46b;animation:pulse .9s infinite alternate}
+body.parle .orbe{background:radial-gradient(circle at 32% 28%,#fff,#7cf0cc 38%,#0d4d33 82%);
+      box-shadow:0 0 20px #7cf0cc;animation:parle .75s ease-in-out infinite alternate}
+@keyframes pulse{to{transform:scale(1.22)}}
+@keyframes onde{0%{transform:scale(.55);opacity:.9}100%{transform:scale(2.4);opacity:0}}
+@keyframes parle{to{transform:scale(1.15)}}
+.marque h1{font-size:17px;letter-spacing:2px;font-weight:700;color:var(--pur)}
+.marque .sous{color:var(--gris);font-size:11px;letter-spacing:.4px}
 
-  .vide { color:var(--gris); font-size:13px; padding:8px 0; }
-  .narrow { max-width:860px; margin:0 auto; }
+.bloc-nav{padding:6px 10px}
+.bloc-nav h2{font-size:10.5px;text-transform:uppercase;letter-spacing:1.4px;
+      color:var(--gris);margin:14px 8px 6px;font-weight:700}
+.lien{display:flex;align-items:center;gap:10px;width:100%;padding:8px 10px;
+      background:transparent;color:var(--gris);border:0;border-radius:10px;
+      cursor:pointer;font:inherit;font-size:13.5px;text-align:left}
+.lien:hover{background:var(--carte2);color:var(--texte)}
+.lien.actif{background:var(--champ);color:var(--accent2)}
+.lien svg{flex:0 0 auto;width:17px;height:17px}
 
-  @media (max-width:900px) {
-    #app { grid-template-columns:0 1fr; }
-    #app.ouvert { grid-template-columns:250px 1fr; }
-    .panneau { padding:14px 14px 6px; }
-    #raccourcis,footer { padding-left:14px; padding-right:14px; }
-    .rangée { max-width:100%; }
-  }
-  ::-webkit-scrollbar { width:9px; height:9px; }
-  ::-webkit-scrollbar-thumb { background:var(--champ-bord); border-radius:9px; }
-  ::-webkit-scrollbar-track { background:transparent; }
+.sessions{flex:1;min-height:0;overflow-y:auto;padding:2px 10px 10px}
+.session{width:100%;text-align:left;background:transparent;border:0;color:var(--gris);
+      font:inherit;font-size:12.5px;padding:7px 10px;border-radius:8px;cursor:pointer;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.session:hover{background:var(--carte2);color:var(--texte)}
+.session.actif{background:var(--champ);color:var(--texte)}
+.pied-aside{padding:10px 12px 14px;border-top:1px solid var(--bord);
+      display:flex;flex-direction:column;gap:8px}
+.bouton-secondaire{display:flex;align-items:center;justify-content:center;gap:8px;
+      width:100%;padding:8px 10px;background:var(--carte2);color:var(--texte);
+      border:1px solid var(--bord);border-radius:10px;cursor:pointer;font:inherit;font-size:13px}
+.bouton-secondaire:hover{border-color:var(--accent);color:var(--accent2)}
+.bouton-danger{color:var(--rouge)}
+.bouton-danger:hover{border-color:var(--rouge);color:var(--rouge)}
+
+/* ══ en-tête ══════════════════════════════════════════════════════════ */
+header{display:flex;align-items:center;gap:12px;padding:12px 20px;
+      border-bottom:1px solid var(--bord);background:rgba(12,15,14,.85)}
+#basculer-menu{background:transparent;border:1px solid var(--bord);color:var(--gris);
+      border-radius:9px;padding:7px 11px;cursor:pointer;font:inherit;font-size:13px}
+#basculer-menu:hover{color:var(--texte);border-color:var(--champ-bord)}
+#titre-page{color:var(--pur);font-size:15px;font-weight:650;letter-spacing:.3px}
+#etat{margin-left:auto;color:var(--gris);text-align:right;font-size:12.5px}
+#etat b{color:var(--vert);font-weight:600}
+#etat b.hors{color:var(--orange)}
+
+/* ══ pages classiques ═════════════════════════════════════════════════ */
+.panneau{min-height:0;overflow-y:auto;padding:20px 26px 10px}
+.page{display:none;max-width:900px;margin:0 auto}
+.page.visible{display:block}
+.page h2{color:var(--pur);font-size:13px;text-transform:uppercase;letter-spacing:1.2px;margin:18px 0 10px}
+.page h2:first-child{margin-top:0}
+
+#fil{display:flex;flex-direction:column;gap:16px;padding:4px 0 12px}
+.rangée{display:flex;gap:12px;max-width:92%}
+.rangée.moi{align-self:flex-end;flex-direction:row-reverse}
+.avatar{flex:0 0 34px;width:34px;height:34px;border-radius:50%;display:flex;
+      align-items:center;justify-content:center;font-weight:700;font-size:13px}
+.avatar.jibi{background:radial-gradient(circle at 32% 28%,#fff,#2fd6a3 40%,#0d3a2e 85%);
+      color:#08251c;box-shadow:0 0 10px #2fd6a344}
+.avatar.moi{background:var(--carte2);color:var(--accent2);border:1px solid var(--champ-bord)}
+.bulle-colonne{min-width:0;display:flex;flex-direction:column;gap:4px}
+.nom{font-size:11.5px;color:var(--gris);letter-spacing:.4px}
+.rangée.moi .nom{text-align:right}
+.bulle{padding:11px 15px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere;
+      line-height:1.55;background:var(--carte);border:1px solid var(--bord)}
+.rangée.moi .bulle{background:var(--champ);border-color:var(--champ-bord);border-bottom-right-radius:5px}
+.rangée:not(.moi) .bulle{border-bottom-left-radius:5px}
+.bulle.systeme{font:12.5px/1.6 var(--mono);background:var(--fond2);border-color:var(--bord)}
+.actions{display:flex;flex-wrap:wrap;gap:6px}
+.puce{font-size:11.5px;color:var(--gris);border:1px solid var(--bord);border-radius:20px;padding:2px 10px}
+.puce.ok{color:var(--vert);border-color:#2fd6a355}
+.puce.ko{color:var(--rouge);border-color:#ff808055}
+
+.carte{background:var(--carte);border:1px solid var(--bord);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.progression{height:8px;background:var(--fond2);border-radius:8px;overflow:hidden;margin:10px 0 8px}
+#barre{height:100%;width:0;border-radius:8px;background:linear-gradient(90deg,var(--bleu),var(--accent));
+      transition:width .35s}
+#progression-detail{color:var(--gris);font-size:12.5px}
+.document,.signal{display:flex;justify-content:space-between;align-items:center;gap:8px;
+      padding:8px 0;border-top:1px solid #ffffff0c}
+.document:first-of-type,.signal:first-of-type{border-top:0}
+.document a{color:var(--bleu);text-decoration:none;font-size:13.5px;overflow-wrap:anywhere}
+.document a:hover{text-decoration:underline}
+.petit{color:var(--gris);font-size:11.5px;white-space:nowrap}
+.signaux{color:var(--texte);font-size:12.5px;line-height:1.7;font-family:var(--mono);
+      background:var(--fond2);border:1px solid var(--bord);border-radius:10px;padding:10px 12px}
+.signaux strong{color:var(--pur);font-weight:700}
+#import-fichiers{display:none}
+.vide{color:var(--gris);font-size:13px;padding:8px 0}
+.narrow{max-width:900px;margin:0 auto}
+
+#raccourcis{display:flex;flex-wrap:wrap;gap:7px;padding:4px 26px 10px}
+#raccourcis button{background:var(--carte);color:var(--gris);border:1px solid var(--bord);
+      border-radius:20px;padding:5px 13px;cursor:pointer;font-size:12.5px;font-family:inherit}
+#raccourcis button:hover{color:var(--accent2);border-color:var(--accent)}
+
+footer{padding:8px 26px 18px}
+.zone-saisie{max-width:900px;margin:0 auto;display:flex;align-items:flex-end;gap:10px;
+      min-height:54px;max-height:170px;padding:8px 10px 8px 16px;
+      background:var(--champ);border:1px solid var(--champ-bord);border-radius:16px;
+      box-shadow:0 -6px 22px #0003;transition:border-color .18s,box-shadow .18s}
+.zone-saisie:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px #2fd6a322,0 -6px 22px #0004}
+#saisie{flex:1;min-width:0;min-height:36px;max-height:150px;resize:none;overflow-y:auto;
+      background:transparent;border:0;color:var(--texte);padding:8px 0;font:inherit;line-height:1.5;outline:none}
+#saisie::placeholder{color:var(--gris)}
+.rond{flex:0 0 44px;width:44px;height:44px;padding:0;border:1px solid var(--champ-bord);
+      border-radius:50%;background:var(--carte2);color:var(--texte);cursor:pointer;
+      display:flex;align-items:center;justify-content:center}
+.rond svg{width:19px;height:19px}
+.rond:hover{border-color:var(--accent);color:var(--accent2)}
+.rond:disabled{opacity:.4;cursor:default}
+#envoyer{background:var(--accent);border-color:var(--accent);color:#08251c}
+#envoyer:hover:not(:disabled){background:var(--accent2);border-color:var(--accent2);color:#08251c}
+#envoyer:disabled{background:var(--carte2);color:var(--gris);border-color:var(--bord)}
+#micro.ecoute{background:#0a3d4a;border-color:var(--bleu);color:var(--bleu);animation:pulse .9s infinite alternate}
+
+/* ══ TABLEAU DE BORD — habillage Jarvis ═══════════════════════════════ */
+#page-tableau{max-width:none;margin:0;overflow-y:auto;position:relative;
+      scrollbar-width:thin;scrollbar-color:var(--champ-bord) transparent}
+
+/* fond coloré : 4 radiaux + linéaire noir en bas, dérive 26 s (Jarvis .tb-art) */
+.tb-art{position:absolute;inset:-4%;z-index:0;pointer-events:none;
+  background:
+    linear-gradient(0deg,#000 0%,#000 44%,transparent 62%),
+    radial-gradient(48% 44% at 72% 22%, color-mix(in srgb,var(--tb-accent) 72%,transparent), transparent 64%),
+    radial-gradient(38% 36% at 98% 50%, color-mix(in srgb,var(--tb-accent-2) 62%,transparent), transparent 64%),
+    radial-gradient(44% 40% at 52% -6%, color-mix(in srgb,var(--tb-accent-2) 38%,transparent), transparent 68%),
+    radial-gradient(28% 30% at 30% 62%, color-mix(in srgb,var(--tb-accent) 26%,transparent), transparent 70%),
+    #050a09;
+  animation:tb-derive 26s ease-in-out infinite alternate}
+@keyframes tb-derive{
+  from{transform:scale(1.06) translate3d(-1.4%,1%,0)}
+  to  {transform:scale(1.16) translate3d(1.6%,-1.4%,0)}}
+/* voile cinéma : trois dégradés croisés (Jarvis .tb-voile) */
+.tb-voile{position:absolute;inset:0;z-index:1;pointer-events:none;
+  background:
+    linear-gradient(90deg,rgba(0,0,0,.86) 0%,rgba(0,0,0,.45) 42%,transparent 72%),
+    linear-gradient(0deg,#000 0%,rgba(0,0,0,.55) 22%,transparent 55%),
+    linear-gradient(180deg,rgba(0,0,0,.55) 0%,transparent 24%)}
+/* réacteur : canvas, couleur et vitesse pilotées par l'état du corps */
+#reacteur{position:absolute;z-index:2;pointer-events:none;
+  top:19vh;right:5vw;width:min(28vw,30vh);height:min(28vw,30vh);opacity:.95;
+  filter:drop-shadow(0 0 40px color-mix(in srgb,var(--tb-accent) 34%,transparent))}
+
+.tableau{position:relative;z-index:3;display:grid;grid-template-rows:minmax(0,auto) auto auto auto}
+
+.tb-banniere{position:relative;display:flex;flex-direction:column;justify-content:flex-end;
+  padding:96px var(--tb-marge) clamp(20px,3vh,38px);min-height:clamp(300px,46vh,520px)}
+.tb-moi{position:absolute;top:clamp(24px,3.2vh,36px);left:var(--tb-marge);
+  display:flex;flex-direction:column;gap:2px}
+.tb-moi b{font-size:21px;font-weight:650;letter-spacing:-.01em;line-height:1.15;color:#fff}
+.tb-moi span{font-size:12.5px;color:var(--tb-texte-2)}
+.tb-heure{position:absolute;top:clamp(20px,2.8vh,32px);right:var(--tb-marge);text-align:right}
+.tb-heure b{display:block;font:300 clamp(30px,3.6vw,46px)/1 var(--sans);letter-spacing:-.02em;
+  color:#fff;text-shadow:0 2px 24px rgba(0,0,0,.7)}
+.tb-heure span{display:block;margin-top:6px;font-size:12.5px;color:var(--tb-texte-2);letter-spacing:.02em}
+
+.tb-vedette{position:relative;max-width:min(64%,1100px)}
+.tb-sur{display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:600;
+  color:var(--tb-accent);letter-spacing:.01em}
+.tb-sur svg{width:20px;height:20px}
+.tb-titre{margin:10px 0 0;font-size:clamp(34px,5vw,66px);font-weight:750;
+  letter-spacing:-.035em;line-height:1;color:#fff;text-shadow:0 8px 40px rgba(0,0,0,.65)}
+.tb-meta{margin-top:18px;display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px}
+.tb-etiquette{padding:5px 12px;border-radius:6px;background:var(--tb-accent);color:#04120e;
+  font-size:12.5px;font-weight:700;letter-spacing:.01em}
+.tb-meta span{font-size:13.5px;color:var(--tb-texte-2)}
+.tb-meta .sep{width:4px;height:4px;border-radius:50%;background:var(--tb-texte-3);padding:0}
+.tb-ensuite{margin-top:14px;font-size:14px;color:var(--tb-texte-3);max-width:74ch;line-height:1.6}
+.tb-ensuite b{color:var(--tb-texte-2);font-weight:600}
+.tb-ensuite code{font-family:var(--mono);font-size:12.5px}
+
+.tb-coup-oeil{position:absolute;left:var(--tb-marge);bottom:clamp(20px,3vh,38px);
+  display:flex;flex-direction:column;gap:8px;max-width:min(31%,350px)}
+.tb-puce{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:10px;
+  background:rgba(20,26,24,.62);backdrop-filter:blur(6px);
+  border:1px solid color-mix(in srgb,var(--accent) 16%,transparent);
+  transition:transform .26s var(--ease-tb),background .26s}
+.tb-puce:hover{transform:translateX(-4px);background:rgba(29,38,35,.82)}
+.tb-puce svg{width:21px;height:21px;flex:none;color:var(--accent)}
+.tb-puce div{min-width:0}
+.tb-puce b,.tb-puce span{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-puce b{font-size:13.5px;font-weight:600;color:#fff}
+.tb-puce span{font-size:11.5px;color:var(--tb-texte-3)}
+
+.tb-rangee{min-width:0;padding:clamp(10px,1.6vh,18px) var(--tb-marge) 0;background:#000}
+.tb-rangee:last-child{padding-bottom:clamp(22px,3.2vh,38px)}
+.tb-rangee h2{margin:0 0 12px;font-size:18px;font-weight:650;letter-spacing:-.01em;color:#fff;
+  text-transform:none}
+.tb-rangee h2 span{margin-left:8px;font-size:13.5px;font-weight:400;color:var(--tb-texte-3)}
+.tb-rail{display:flex;gap:14px;min-width:0;overflow-x:auto;padding-bottom:6px;
+  scrollbar-width:thin;scrollbar-color:#2a2f2c #000}
+.tb-rail::-webkit-scrollbar{height:8px}
+.tb-rail::-webkit-scrollbar-thumb{background:#2a2f2c;border-radius:4px}
+/* les cartes sœurs s'effacent au survol (Jarvis :has()) */
+.tb-rail:has(> .tb-carte:hover) > .tb-carte:not(:hover){opacity:.72}
+
+.tb-carte{--carte-accent:var(--accent);--zoom:1.04;
+  position:relative;overflow:hidden;min-width:0;flex:1 1 0;
+  padding:18px 20px;border-radius:10px;background:var(--carte);
+  box-shadow:0 10px 30px -14px rgba(0,0,0,.9);
+  transition:transform .26s var(--ease-tb),box-shadow .26s var(--ease-tb),background .26s,opacity .26s}
+.tb-carte::after{content:"";position:absolute;left:0;right:0;top:0;height:3px;
+  background:var(--carte-accent);opacity:.9}
+.tb-carte::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(420px 210px at 100% 0%, color-mix(in srgb,var(--carte-accent) 22%,transparent), transparent 70%)}
+.tb-carte > *{position:relative}
+.tb-carte:hover{transform:scale(var(--zoom));z-index:3;background:var(--carte2);
+  box-shadow:0 30px 70px -18px #000,0 0 0 1px color-mix(in srgb,var(--carte-accent) 45%,transparent)}
+.tb-carte:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.tb-carte.ko{--carte-accent:var(--tb-rouge)}
+.tb-carte.warn{--carte-accent:var(--orange)}
+
+.tb-tete{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.tb-tete svg{width:19px;height:19px;flex:none;color:var(--carte-accent)}
+.tb-tete h3{margin:0;font-size:12px;font-weight:600;letter-spacing:.07em;
+  text-transform:uppercase;color:var(--tb-texte-3)}
+.tb-valeur{font-size:clamp(24px,2.4vw,32px);font-weight:700;letter-spacing:-.025em;
+  line-height:1.08;color:#fff}
+.tb-valeur em{font-style:normal;font-size:.5em;font-weight:500;color:var(--tb-texte-3);
+  letter-spacing:0;margin-left:6px}
+.tb-detail{margin-top:8px;font-size:12.5px;color:var(--tb-texte-2);line-height:1.5}
+.tb-detail b{color:#fff;font-weight:600}
+.tb-detail code{font-family:var(--mono);font-size:11.5px;color:var(--tb-texte-3)}
+.tb-jauge{margin-top:14px;height:4px;border-radius:2px;background:rgba(255,255,255,.10);overflow:hidden}
+.tb-jauge i{display:block;height:100%;border-radius:2px;background:var(--carte-accent);
+  transition:width .8s var(--ease-tb)}
+.tb-liste{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:7px}
+.tb-liste li{display:flex;align-items:baseline;gap:8px;font-size:12.5px;color:var(--tb-texte-2);line-height:1.45}
+.tb-liste li::before{content:"";width:5px;height:5px;border-radius:50%;flex:none;
+  background:var(--carte-accent);transform:translateY(-2px)}
+.tb-liste li.ok::before{background:var(--tb-vert)}
+.tb-liste li.ko::before{background:var(--tb-rouge)}
+.pastille{display:inline-flex;align-items:center;gap:7px;font-size:13px;font-weight:600;color:var(--tb-texte-2)}
+.pastille i{width:7px;height:7px;border-radius:50%;background:var(--tb-vert);
+  box-shadow:0 0 0 3px color-mix(in srgb,var(--tb-vert) 22%,transparent)}
+.pastille.off i{background:var(--tb-texte-3);box-shadow:none}
+.pastille.warn i{background:var(--orange);box-shadow:0 0 0 3px color-mix(in srgb,var(--orange) 22%,transparent)}
+
+/* accents par état — base neutre, couleur portée par la carte */
+.a-jade{--carte-accent:var(--accent)}
+.a-cyan{--carte-accent:var(--bleu)}
+.a-ambre{--carte-accent:var(--orange)}
+.a-vert{--carte-accent:var(--tb-vert)}
+.a-rouge{--carte-accent:var(--tb-rouge)}
+.a-rose{--carte-accent:#ff7ab8}
+
+@keyframes tb-monte{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+.tableau.entree .tb-vedette{animation:tb-monte .8s var(--ease-tb) backwards}
+.tableau.entree .tb-carte,.tableau.entree .tb-puce{animation:tb-monte .7s var(--ease-tb) backwards;
+  animation-delay:calc(140ms + var(--i,0) * 50ms)}
+
+/* Barre de navigation du tableau de bord. En plein cadre l'en-tête — qui porte
+   le bouton ☰ — est masqué : sans elle, aucun moyen de quitter la vue sur un
+   écran large. Inspirée du « controle-tiroir » de Jarvis. */
+.tb-nav{position:absolute;z-index:6;top:clamp(20px,2.6vh,30px);right:var(--tb-marge);
+  display:flex;gap:8px;align-items:center}
+.tb-nav button{font:inherit;font-size:12.5px;font-weight:600;color:var(--tb-texte-2);
+  background:rgba(20,26,24,.66);border:1px solid color-mix(in srgb,var(--accent) 18%,transparent);
+  padding:7px 13px;border-radius:8px;cursor:pointer;backdrop-filter:blur(6px);
+  transition:color .2s,background .2s,border-color .2s}
+.tb-nav button:hover{color:#fff;background:rgba(29,38,35,.92);border-color:var(--accent)}
+.tb-nav button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+
+/* ══ responsive & accessibilité ═══════════════════════════════════════ */
+@media (max-width:900px){
+  #app{grid-template-columns:0 1fr}
+  #app.ouvert{grid-template-columns:250px 1fr}
+  .panneau{padding:14px 14px 6px}
+  #raccourcis,footer{padding-left:14px;padding-right:14px}
+  .rangée{max-width:100%}
+  .tb-banniere{min-height:0;padding:88px 18px 18px}
+  .tb-vedette{max-width:100%}
+  .tb-coup-oeil{position:static;max-width:100%;margin-top:24px;flex-direction:row;
+    overflow-x:auto;padding-bottom:4px}
+  .tb-puce{min-width:212px}
+  #reacteur{top:9vh;right:-10vw;width:56vw;height:56vw;opacity:.45}
+  .tb-carte{flex:0 1 258px}
+  .tb-rangee{padding-left:18px;padding-right:18px}
+}
+@media (prefers-reduced-motion:reduce){
+  .tb-art,.tableau.entree .tb-carte,.tableau.entree .tb-puce,.tableau.entree .tb-vedette{animation:none}
+  .tb-carte,.tb-puce,#reacteur,.orbe{transition:none;animation:none}
+}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-thumb{background:var(--champ-bord);border-radius:9px}
+::-webkit-scrollbar-track{background:transparent}
 </style>
 </head>
 <body>
 <div id="app">
+
+  <!-- ══ barre latérale ═══════════════════════════════════════════════ -->
   <aside id="aside">
     <div class="marque">
       <div class="orbe" id="orbe"></div>
       <div><h1>JIBI</h1><div class="sous">assistant local · 100 % sur ton PC</div></div>
     </div>
-    <div class="bloc-nav">
-      <button class="lien actif" id="nav-chat" data-page="chat">
+    <div class="bloc-nav" id="bloc-nav">
+      <button class="lien actif" id="nav-tableau" data-page="tableau">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7.5" height="9" rx="1.6"/><rect x="13.5" y="3" width="7.5" height="5.5" rx="1.6"/><rect x="13.5" y="12" width="7.5" height="9" rx="1.6"/><rect x="3" y="15.5" width="7.5" height="5.5" rx="1.6"/></svg>
+        Tableau de bord</button>
+      <button class="lien" id="nav-chat" data-page="chat">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.8-.8L3 21l1.9-4.2A8.4 8.4 0 0 1 12 3.1a8.4 8.4 0 0 1 9 8.4z"/></svg>
         Conversation</button>
       <button class="lien" id="nav-docs" data-page="documents">
@@ -194,7 +388,7 @@
       <button class="lien" id="nav-signaux" data-page="signaux">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h.01M7 20v-4M12 20v-8M17 20V8M22 4v16"/></svg>
         Signaux du PC</button>
-      <button class="lien" id="nav-progress" data-page="progression">
+      <button class="lien" id="nav-progress" data-page="progress">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/></svg>
         Évolution</button>
     </div>
@@ -210,19 +404,83 @@
     </div>
   </aside>
 
-  <div id="principal">
+  <!-- ══ zone principale ══════════════════════════════════════════════ -->
+  <div id="principal" class="mode-tableau">
+
     <header>
       <button id="basculer-menu" title="Afficher ou masquer le menu">☰</button>
-      <div id="titre-page">Conversation</div>
+      <div id="titre-page">Tableau de bord</div>
       <div id="etat">connexion…</div>
     </header>
 
-    <!-- ── page conversation ─────────────────────────────────────── -->
-    <div class="panneau page visible" id="page-chat">
+    <!-- ── TABLEAU DE BORD : plein cadre, habillage Jarvis ──────────── -->
+    <div class="panneau page visible" id="page-tableau">
+      <div class="tb-art"></div>
+      <div class="tb-voile"></div>
+      <canvas id="reacteur" aria-hidden="true"></canvas>
+
+      <div class="tableau" id="tableau">
+
+        <section class="tb-banniere">
+          <nav class="tb-nav" id="tb-nav" aria-label="Changer de vue">
+            <button type="button" data-page="chat" title="Conversation (c)">Conversation</button>
+            <button type="button" data-page="documents" title="Documents (d)">Documents</button>
+            <button type="button" data-page="signaux" title="Signaux du PC (s)">Signaux</button>
+            <button type="button" data-page="progress" title="Évolution (e)">Évolution</button>
+          </nav>
+          <div class="tb-moi">
+            <b>JIBI</b>
+            <span id="tb-date">—</span>
+          </div>
+          <div class="tb-heure">
+            <b id="tb-heure">--:--</b>
+            <span id="tb-jour">—</span>
+          </div>
+
+          <div class="tb-vedette">
+            <div class="tb-sur">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
+              <span id="tb-sur">En ce moment</span>
+            </div>
+            <h1 class="tb-titre" id="tb-titre">Chargement…</h1>
+            <div class="tb-meta">
+              <span class="tb-etiquette" id="tb-modele">—</span>
+              <span class="pastille" id="tb-ollama"><i></i><span id="tb-ollama-texte">Ollama</span></span>
+              <span class="sep"></span>
+              <span id="tb-outils">— outils</span>
+              <span class="sep"></span>
+              <span id="tb-version">—</span>
+            </div>
+            <p class="tb-ensuite" id="tb-ensuite">Lecture de l'état de JIBI…</p>
+          </div>
+
+          <div class="tb-coup-oeil" id="tb-coup-oeil"></div>
+        </section>
+
+        <section class="tb-rangee">
+          <h2>Signaux du PC <span>relevés par outils/signaux.py</span></h2>
+          <div class="tb-rail" id="tb-signaux"><div class="vide">Analyse en cours…</div></div>
+        </section>
+
+        <section class="tb-rangee">
+          <h2>Sécurité <span>état lu en direct sur /api/securite</span></h2>
+          <div class="tb-rail" id="tb-securite"><div class="vide">Lecture des verrous…</div></div>
+        </section>
+
+        <section class="tb-rangee">
+          <h2>Activité <span>évolution, documents, audit</span></h2>
+          <div class="tb-rail" id="tb-activite"><div class="vide">Chargement…</div></div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- ── page conversation ────────────────────────────────────────── -->
+    <div class="panneau page" id="page-chat">
       <div id="fil"></div>
     </div>
 
-    <!-- ── page documents ────────────────────────────────────────── -->
+    <!-- ── page documents ───────────────────────────────────────────── -->
     <div class="panneau page" id="page-documents">
       <div class="narrow">
         <h2>Documents prêts</h2>
@@ -235,7 +493,7 @@
       </div>
     </div>
 
-    <!-- ── page signaux ──────────────────────────────────────────── -->
+    <!-- ── page signaux ─────────────────────────────────────────────── -->
     <div class="panneau page" id="page-signaux">
       <div class="narrow">
         <h2>Signaux du PC</h2>
@@ -243,7 +501,7 @@
       </div>
     </div>
 
-    <!-- ── page évolution ────────────────────────────────────────── -->
+    <!-- ── page évolution ───────────────────────────────────────────── -->
     <div class="panneau page" id="page-progress">
       <div class="narrow">
         <h2>Jauge d'évolution</h2>
@@ -283,21 +541,25 @@ const fil=$("fil"),saisie=$("saisie"),bouton=$("envoyer"),etat=$("etat"),
       barre=$("barre"),progres=$("progression-detail"),documents=$("documents"),
       signaux=$("signaux"),importInput=$("import-fichiers"),importButton=$("importer"),
       importCourt=$("importer-court"),microBouton=$("micro"),app=$("app"),
-      sessions=$("sessions"),audit=$("audit");
+      sessions=$("sessions"),audit=$("audit"),principal=$("principal");
 const RACCOURCIS=["Quelle heure est-il ?","Quels sont tes signaux PC ?","Ouvre mon compte Google",
                   "Analyse un fichier","Lance un dé","Prends une note : penser à JIBI","Améliore-toi"];
-// La boule du panneau = même raccourci que la boule du bureau : cliquer = écouter.
+const PAGES={tableau:"Tableau de bord",chat:"Conversation",documents:"Documents",
+             signaux:"Signaux du PC",progress:"Évolution"};
+let pageCourante="tableau",sessionActive=null;
+
+/* La boule du panneau = même raccourci que la boule du bureau : cliquer = écouter. */
 const orbePanneau=$("orbe");
 orbePanneau.style.cursor="pointer";
 orbePanneau.title="Clique : JIBI t'écoute";
 orbePanneau.addEventListener("click",()=>{
   if(!microBouton.classList.contains("ecoute"))ecouterMicro();
 });
-const PAGES={chat:"Conversation",documents:"Documents",signaux:"Signaux du PC",progress:"Évolution"};
-let pageCourante="chat",sessionActive=null;
 
 function nettoyer(t){return String(t??"").replace(/\u00a0/g," ").replace(/\u202f/g," ").replace(/\ufffd/g," ");}
 function defiler(){fil.scrollTop=fil.scrollHeight;}
+
+/* ══ conversation ═══════════════════════════════════════════════════════ */
 function bulle(texte,moi,systeme){
   const r=document.createElement("div");r.className="rangée"+(moi?" moi":"");
   const av=document.createElement("div");av.className="avatar "+(moi?"moi":"jibi");av.textContent=moi?"Toi":"J";
@@ -327,6 +589,7 @@ async function envoyer(texte){
   texte=nettoyer(texte||saisie.value).trim();
   if(!texte)return;
   saisie.value="";ajusterSaisie();
+  if(pageCourante!=="chat")montrerPage("chat");
   bulle(texte,true);bouton.disabled=true;saisie.disabled=true;
   document.body.classList.add("reflexion");
   const attente=bulle("…",false);
@@ -345,7 +608,7 @@ async function envoyer(texte){
   rafraichirDocuments();
 }
 
-/* ── voix : JIBI parle ses réponses (interrupteur) ─────────── */
+/* ══ voix : JIBI parle ses réponses (interrupteur) ══════════════════════ */
 let voixActive=false;
 async function lireAHauteVoix(texte){
   if(!voixActive||!texte)return;
@@ -363,32 +626,55 @@ boutonVoix.addEventListener("click",async()=>{
   boutonVoix.querySelector("#voix-libelle").textContent="Voix : "+(voixActive?"on":"off");
   if(voixActive)lireAHauteVoix("Voix activée.");
 });
-document.querySelector(".bloc-nav").appendChild(boutonVoix);
+$("bloc-nav").appendChild(boutonVoix);
 fetch("/api/voix/etat").then(r=>r.json()).then(j=>{
   if(!j.disponible){boutonVoix.style.display="none";}
 }).catch(()=>{});
 
-/* ── navigation pages ─────────────────────────────────────────── */
+/* ══ navigation ═════════════════════════════════════════════════════════ */
 function montrerPage(page){
-  pageCourante=PAGES[page]?page:"chat";
+  pageCourante=PAGES[page]?page:"tableau";
   for(const p of document.querySelectorAll(".page"))p.classList.remove("visible");
   $("page-"+(pageCourante==="progress"?"progress":pageCourante)).classList.add("visible");
   $("titre-page").textContent=PAGES[pageCourante];
   for(const b of document.querySelectorAll(".lien"))b.classList.toggle("actif",b.dataset.page===pageCourante);
-  if(pageCourante!=="chat")$("raccourcis").style.display="none";
-  else $("raccourcis").style.display="";
-  if(window.innerWidth<=900)app.classList.remove("ouvert");
+
+  /* le tableau de bord est plein cadre : menu replié, ni en-tête ni saisie.
+     Sur n'importe quelle autre page, on rend le menu et le pied. */
+  const pleinCadre=(pageCourante==="tableau");
+  principal.classList.toggle("mode-tableau",pleinCadre);
+  app.classList.toggle("replie",pleinCadre);
+  if(!pleinCadre&&window.innerWidth>900)app.classList.remove("replie");
+
+  $("raccourcis").style.display=(pageCourante==="chat")?"":"none";
+  if(window.innerWidth<=900&&!pleinCadre)app.classList.remove("ouvert");
   if(pageCourante==="documents")rafraichirDocuments();
   if(pageCourante==="signaux")rafraichirSignaux();
   if(pageCourante==="progress"){rafraichirProgression();rafraichirAudit();}
+  if(pageCourante==="tableau"){rafraichirTableau();reacteurActif=true;}
+  else reacteurActif=false;
   if(pageCourante==="chat"){saisie.focus();defiler();}
 }
 for(const b of document.querySelectorAll(".lien"))b.addEventListener("click",()=>montrerPage(b.dataset.page));
+for(const b of $("tb-nav").querySelectorAll("button"))b.addEventListener("click",()=>montrerPage(b.dataset.page));
 $("basculer-menu").addEventListener("click",()=>{
+  /* En plein cadre le menu est replié et l'en-tête masqué : ce bouton ne sert
+     à rien. Sur le tableau de bord, il ramène à la conversation. */
+  if(pageCourante==="tableau"){montrerPage("chat");return;}
   app.classList.toggle("replie");app.classList.toggle("ouvert");
 });
+/* Raccourcis clavier : les initiales des quatre vues, plus « t » pour revenir
+   au tableau de bord. Ignorés dès qu'on saisit du texte. */
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const c=e.target&&e.target.tagName;
+  if(c==="TEXTAREA"||c==="INPUT"||e.target&&e.target.isContentEditable)return;
+  const CLES={t:"tableau",c:"chat",d:"documents",s:"signaux",e:"progress"};
+  const page=CLES[e.key.toLowerCase()];
+  if(page&&page!==pageCourante){montrerPage(page);e.preventDefault();}
+});
 
-/* ── sessions (API /api/sessions du serveur local) ─────────── */
+/* ══ sessions ═══════════════════════════════════════════════════════════ */
 async function rafraichirSessions(){
   try{
     const j=await(await fetch("/api/sessions")).json();
@@ -422,7 +708,6 @@ async function ouvrirSession(id){
     rafraichirSessions();
   }catch(e){bulle("Impossible d'ouvrir la session.",false);}
 }
-rafraichirSessions();
 $("nouvelle-session").addEventListener("click",()=>{
   fil.replaceChildren();
   bulle("Nouvelle conversation. Que veux-tu faire ?",false);
@@ -434,7 +719,7 @@ $("supprimer-session").addEventListener("click",async()=>{
   bulle("Conversation effacée à l'écran. Pour supprimer définitivement une session, clique droit sur une session dans la fenêtre de bureau → Bibliothèque.",false);
 });
 
-/* ── micro (API /api/ecoute du serveur local) ─────────────────── */
+/* ══ micro ══════════════════════════════════════════════════════════════ */
 async function ecouterMicro(){
   if(microBouton.classList.contains("ecoute"))return;
   microBouton.classList.add("ecoute");
@@ -450,9 +735,9 @@ async function ecouterMicro(){
 }
 microBouton.addEventListener("click",ecouterMicro);
 
-/* ── import ───────────────────────────────────────────────────── */
+/* ══ import ═════════════════════════════════════════════════════════════ */
 importCourt.addEventListener("click",()=>{importInput.click();});
-importButton.addEventListener("click",()=>importInput.click());
+importButton.addEventListener("click",()=>{importInput.click();});
 importInput.addEventListener("change",async()=>{
   const fichiers=[...importInput.files];
   if(!fichiers.length)return;
@@ -469,17 +754,302 @@ importInput.addEventListener("change",async()=>{
   finally{importButton.disabled=false;importCourt.disabled=false;importInput.value="";}
 });
 
-/* ── données périodiques ──────────────────────────────────────── */
+/* ══ TABLEAU DE BORD ════════════════════════════════════════════════════
+   Les trois rails sont alimentés par les routes existantes (/api/etat,
+   /api/signaux, /api/progression, /api/documents, /api/audit) plus
+   /api/securite, qui lit l'état réel des verrous au moment de la requête.
+   Rien n'est recopié en dur : si un verrou saute, la carte passe au rouge.
+   ══════════════════════════════════════════════════════════════════════ */
+const I={
+  disque:'<path d="M4 7h16M4 12h16M4 17h16"/><circle cx="7" cy="7" r="1"/><circle cx="7" cy="12" r="1"/><circle cx="7" cy="17" r="1"/>',
+  memoire:'<rect x="3" y="7" width="18" height="10" rx="2"/><path d="M7 17v3M12 17v3M17 17v3M7 7V4M17 7V4"/>',
+  cpu:'<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/><path d="M9 3v3M15 3v3M9 18v3M15 18v3M3 9h3M3 15h3M18 9h3M18 15h3"/>',
+  reseau:'<path d="M2 9a15 15 0 0 1 20 0M5.5 12.5a10 10 0 0 1 13 0M9 16a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1.3" fill="currentColor" stroke="none"/>',
+  bouclier:'<path d="M12 3 5 6v5.5c0 4.3 2.9 8.2 7 9.5 4.1-1.3 7-5.2 7-9.5V6l-7-3Z"/><path d="m9.2 12 2 2 3.6-3.8"/>',
+  cle:'<circle cx="8" cy="14" r="4"/><path d="m11 11 8-8 2 2-2 2 1.5 1.5L18 11l-1.5 1.5L15 11l-2 2"/>',
+  cadenas:'<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/><circle cx="12" cy="15.5" r="1.4" fill="currentColor" stroke="none"/>',
+  oeil:'<path d="M2.5 12S6 6.5 12 6.5 21.5 12 21.5 12 18 17.5 12 17.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="2.8"/>',
+  doc:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h4"/>',
+  coeur:'<path d="M12 20s-7-4.4-7-9.3A3.9 3.9 0 0 1 12 8a3.9 3.9 0 0 1 7 2.7C19 15.6 12 20 12 20Z"/><path d="M5 12h3l1.5-2.5L12 15l1.5-3H19"/>',
+  eclair:'<path d="M13 2 4.5 13.5H11L10 22l8.5-11.5H12L13 2Z"/>',
+  jauge:'<path d="M22 12A10 10 0 1 1 12 2"/><path d="M22 2 12 12"/>',
+  etiquette:'<path d="M3 12V5a2 2 0 0 1 2-2h7l9 9-9 9-9-9Z"/><circle cx="7.5" cy="7.5" r="1.3"/>',
+};
+const svg=c=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${I[c]||""}</svg>`;
+
+function carte({accent="a-jade",icone,titre,valeur,unite="",detail="",jauge=null,ko=false,warn=false}){
+  const el=document.createElement("article");
+  el.className="tb-carte "+accent+(ko?" ko":"")+(warn?" warn":"");
+  el.tabIndex=0;
+  let h=`<div class="tb-tete">${svg(icone)}<h3>${titre}</h3></div>`;
+  if(valeur!==undefined&&valeur!=="")h+=`<div class="tb-valeur">${valeur}${unite?`<em>${unite}</em>`:""}</div>`;
+  if(detail)h+=`<div class="tb-detail">${detail}</div>`;
+  if(jauge!==null&&jauge!==undefined)h+=`<div class="tb-jauge"><i style="width:0%"></i></div>`;
+  el.innerHTML=h;
+  if(jauge!==null&&jauge!==undefined){
+    requestAnimationFrame(()=>{const i=el.querySelector(".tb-jauge i");if(i)i.style.width=Math.max(0,Math.min(100,jauge))+"%";});
+  }
+  return el;
+}
+function monterRail(id,cartes){
+  const cible=$(id);if(!cible)return;
+  cible.replaceChildren();
+  if(!cartes.length){
+    const d=document.createElement("div");d.className="vide";d.textContent="Aucune donnée";
+    cible.appendChild(d);return;
+  }
+  cartes.forEach((c,i)=>{const el=carte(c);el.style.setProperty("--i",i);cible.appendChild(el);});
+}
+/* extraction robuste : si signaux.py change sa phrase, on retombe sur le brut */
+function nombre(texte,motif){
+  const m=String(texte||"").match(motif);
+  return m?Number(m[1].replace(",",".")):null;
+}
+
+let DERNIER_SIGNAUX=null,DERNIER_ETAT=null;
+
+async function rafraichirTableau(){
+  await Promise.all([rendreSignaux(),rendreSecurite(),rendreActivite()]);
+}
+
+async function rendreSignaux(){
+  let s;
+  try{ s=await(await fetch("/api/signaux")).json(); }
+  catch(e){ monterRail("tb-signaux",[]); return; }
+  DERNIER_SIGNAUX=s;
+
+  const libres=nombre(s.disque,/(\d+(?:[.,]\d+)?)\s*Go\s*libres/i);
+  const total=nombre(s.disque,/sur\s*(\d+(?:[.,]\d+)?)\s*Go/i);
+  const pct=nombre(s.disque,/(\d+(?:[.,]\d+)?)\s*%\s*utilis/i);
+  const memoire=nombre(s.systeme,/mémoire\s*:\s*(\d+(?:[.,]\d+)?)\s*Go/i);
+  const processus=nombre(s.processus,/(\d+)\s*processus/i);
+  const enLigne=String(s.reseau||"").toLowerCase().includes("ligne")&&!String(s.reseau||"").toLowerCase().includes("hors");
+  const batterieWindows=String(s.batterie||"").toLowerCase().includes("windows");
+
+  monterRail("tb-signaux",[
+    {accent:"a-jade",icone:"disque",titre:"Disque",
+     valeur:libres!==null?libres:undefined,unite:libres!==null?"Go libres":"",
+     detail:libres!==null&&total!==null
+       ? `sur ${total} Go${pct!==null?` — <b>${pct} %</b> utilisés`:""}`
+       : nettoyer(s.disque||"—"),
+     jauge:pct!==null?pct:null,
+     warn:pct!==null&&pct>85,ko:pct!==null&&pct>95},
+    {accent:"a-cyan",icone:"memoire",titre:"Mémoire",
+     valeur:memoire!==null?memoire:undefined,unite:memoire!==null?"Go":"",
+     detail:memoire!==null?"relevée par <code>psutil</code>":nettoyer(s.systeme||"—"),
+     jauge:null},
+    {accent:"a-ambre",icone:"cpu",titre:"Processus",
+     valeur:processus!==null?processus:undefined,unite:processus!==null?"en cours":"",
+     detail:"les 5 plus gourmands sont listés par <code>info_systeme</code>"},
+    {accent:enLigne?"a-vert":"a-rouge",icone:"reseau",titre:"Réseau",
+     valeur:enLigne?"En ligne":"Hors ligne",
+     detail:"sonde <code>1.1.1.1:443</code>, 2 s — rien n'est transmis",
+     ko:!enLigne},
+    {accent:"a-rose",icone:"coeur",titre:"Batterie",
+     valeur:batterieWindows?"n/d":(s.batterie?"—":"n/d"),
+     detail:batterieWindows
+       ? "information disponible sous <b>Windows seulement</b> — ce poste n'y est pas"
+       : nettoyer(s.batterie||"—")},
+  ]);
+}
+
+async function rendreSecurite(){
+  let d;
+  try{ d=await(await fetch("/api/securite")).json(); }
+  catch(e){ monterRail("tb-securite",[]); return; }
+  const verrous=d.verrous||[];
+  const ICONES={confirmer:"bouclier",garde:"cadenas",modif_auto:"cle",deplacement:"doc",
+                local:"oeil",noyau:"cadenas",mcp_liste:"cle",mcp_jeton:"etiquette",
+                mcp_actif:"eclair",mcp:"eclair",cloud:"reseau"};
+  const cartes=verrous.map(v=>({
+    accent:v.ok?"a-vert":"a-rouge",
+    icone:ICONES[v.cle]||"bouclier",
+    titre:v.titre,
+    valeur:v.ok?"Verrouillé":"Ouvert",
+    detail:nettoyer(v.detail)+(v.source?` <code>${nettoyer(v.source)}</code>`:""),
+    ko:!v.ok,
+  }));
+  cartes.unshift({
+    accent:(d.actifs===d.total)?"a-jade":"a-rouge",
+    icone:"bouclier",titre:"Verrous actifs",
+    valeur:d.actifs,unite:"/ "+d.total,
+    detail:d.actifs===d.total
+      ? "tout est fermé — chaque verrou a son assertion dans <code>tests/verification.py</code>"
+      : "<b>au moins un verrou est ouvert</b> — regarde les cartes en rouge",
+    jauge:d.total?100*d.actifs/d.total:0,
+    ko:d.actifs!==d.total,
+  });
+  monterRail("tb-securite",cartes);
+}
+
+async function rendreActivite(){
+  let p={},a=[],docs=[];
+  try{ p=await(await fetch("/api/progression")).json(); }catch(e){}
+  try{ a=(await(await fetch("/api/audit")).json()).evenements||[]; }catch(e){}
+  try{ docs=(await(await fetch("/api/documents")).json()).documents||[]; }catch(e){}
+  const s=DERNIER_SIGNAUX||{},e2=DERNIER_ETAT||{};
+  const n=Math.max(0,Math.min(100,Number(p.pourcent)||0));
+  const dernier=a.length?`${nettoyer(a[0].quand||"")} · ${nettoyer(
+      typeof (a[0].detail||a[0].action||a[0].outil)==="string"
+        ? (a[0].detail||a[0].action||a[0].outil)
+        : JSON.stringify(a[0].detail||a[0].action||a[0].outil)).slice(0,90)}`:"";
+
+  monterRail("tb-activite",[
+    {accent:"a-jade",icone:"jauge",titre:"Évolution",
+     valeur:n,unite:"%",
+     detail:p.actif?`<b>${nettoyer(p.titre||"tâche en cours")}</b>${p.etape?" — "+nettoyer(p.etape):""}`
+                    :"aucune tâche en cours",
+     jauge:n},
+    {accent:"a-cyan",icone:"doc",titre:"Documents",
+     valeur:docs.length,unite:"prêts",
+     detail:docs.length
+       ? `dernier : <b>${nettoyer(docs[0].nom)}</b> · servis par <code>/telecharger/</code>`
+       : "l'espace <code>donnees/fichiers/</code> est vide — importe un document"},
+    {accent:"a-ambre",icone:"coeur",titre:"Erreurs JIBI",
+     valeur:s.erreurs_jibi!==undefined?s.erreurs_jibi:"—",unite:"journalisées",
+     detail:"c'est le carburant de la boucle d'auto-amélioration",
+     warn:Number(s.erreurs_jibi||0)>0},
+    {accent:"a-rose",icone:"etiquette",titre:"Version",
+     valeur:nettoyer(s.version||e2.version||"—"),
+     detail:`relevé à ${nettoyer(s.quand||"—")} · ${nettoyer(s.systeme||"").slice(0,72)}`},
+    {accent:"a-vert",icone:"oeil",titre:"Dernier audit",
+     valeur:a.length?"Actif":"Vide",
+     detail:dernier?"<code>"+dernier+"</code>":"la chaîne de hachage n'a rien enregistré",
+     ko:!a.length},
+  ]);
+}
+
+/* ── bannière : état réel, horloge vivante ────────────────────────────── */
+const JOURS=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+const MOIS=["janvier","février","mars","avril","mai","juin","juillet","août","septembre","octobre","novembre","décembre"];
+function tickHorloge(){
+  const d=new Date();
+  const hh=String(d.getHours()).padStart(2,"0"),mm=String(d.getMinutes()).padStart(2,"0");
+  const jour=JOURS[d.getDay()];
+  $("tb-heure").textContent=hh+":"+mm;
+  $("tb-jour").textContent=jour+" "+d.getDate()+" "+MOIS[d.getMonth()];
+  $("tb-date").textContent=jour[0].toUpperCase()+jour.slice(1)+" "+d.getDate()+" "+MOIS[d.getMonth()]+" "+d.getFullYear();
+}
+function rendreBanniere(){
+  const j=DERNIER_ETAT||{};
+  $("tb-modele").textContent=j.modele||"—";
+  $("tb-outils").textContent=(j.outils||0)+" outils";
+  const ollama=$("tb-ollama");
+  ollama.classList.toggle("off",!j.ollama);
+  /* le libellé vit dans son propre <span> : passer par nextSibling casse dès
+     que le HTML bouge d'une espace ou d'un commentaire. */
+  $("tb-ollama-texte").textContent=j.ollama?"Ollama":"Ollama absent";
+  const s=DERNIER_SIGNAUX||{};
+  $("tb-version").textContent=s.version||"";
+  $("tb-titre").textContent=j.ollama?"Tout est local":"Prêt, sans cerveau";
+  $("tb-ensuite").innerHTML=j.ollama
+    ? "Le cerveau tourne sur ce PC, sans GPU. <b>Aucune demande ne quitte la machine</b> tant que la voie cloud reste désactivée."
+    : "Ollama ne répond pas : JIBI tient encore l'heure, le calcul, les notes et les documents. <b>Lance Ollama</b>, puis vérifie avec <code>python docteur.py</code>.";
+  const coups=[
+    {icone:"bouclier",b:"Panneau local only",s:"socket · Host · X-Forwarded-* · Origin"},
+    {icone:"cle",b:"MCP sur liste blanche",s:"jeton X-JIBI-Token obligatoire"},
+    {icone:"cadenas",b:"Noyau verrouillé",s:"tests/ et ruff.toml non modifiables"},
+  ];
+  const cible=$("tb-coup-oeil");
+  cible.replaceChildren();
+  coups.forEach((p,i)=>{
+    const el=document.createElement("div");
+    el.className="tb-puce";el.style.setProperty("--i",i);
+    const t=document.createElement("div");
+    const b=document.createElement("b");b.textContent=p.b;
+    const sp=document.createElement("span");sp.textContent=p.s;
+    t.append(b,sp);
+    el.innerHTML=svg(p.icone);
+    el.appendChild(t);
+    cible.appendChild(el);
+  });
+}
+
+/* ── réacteur : canvas piloté par l'état du corps ─────────────────────── */
+const cv=$("reacteur"),cx=cv.getContext("2d");
+let tReacteur=0,reacteurActif=true;
+const ETATS_REACTEUR={
+  repos:   {milieu:"#2fd6a3",coeur:"#7cf0cc",vitesse:1.0},
+  ecoute:  {milieu:"#5cc8e8",coeur:"#a8e8ff",vitesse:2.6},
+  reflexion:{milieu:"#ffc46b",coeur:"#ffe4b0",vitesse:3.8},
+  parle:   {milieu:"#7cf0cc",coeur:"#ffffff",vitesse:1.8},
+};
+function etatReacteur(){
+  const c=document.body.classList;
+  if(c.contains("reflexion"))return ETATS_REACTEUR.reflexion;
+  if(c.contains("ecoute"))return ETATS_REACTEUR.ecoute;
+  if(c.contains("parle"))return ETATS_REACTEUR.parle;
+  return ETATS_REACTEUR.repos;
+}
+function dimensionnerReacteur(){
+  if(!cv)return;
+  const r=cv.getBoundingClientRect(),ratio=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*ratio));
+  cv.height=Math.max(1,Math.round(r.height*ratio));
+}
+function dessinerReacteur(){
+  if(!cv||!cv.width||!cv.height)return;
+  const w=cv.width,h=cv.height,c={x:w/2,y:h/2},R=Math.min(w,h)/2;
+  const E=etatReacteur();
+  cx.clearRect(0,0,w,h);
+  const halo=cx.createRadialGradient(c.x,c.y,R*0.05,c.x,c.y,R);
+  halo.addColorStop(0,E.coeur+"55");halo.addColorStop(0.45,E.milieu+"22");halo.addColorStop(1,"rgba(0,0,0,0)");
+  cx.fillStyle=halo;cx.beginPath();cx.arc(c.x,c.y,R,0,7);cx.fill();
+
+  const anneaux=[
+    {r:0.92,e:0.010,v: 0.18,a:0.30,arcs:3,long:0.42},
+    {r:0.78,e:0.016,v:-0.31,a:0.55,arcs:2,long:0.62},
+    {r:0.63,e:0.008,v: 0.47,a:0.42,arcs:5,long:0.22},
+    {r:0.50,e:0.022,v:-0.22,a:0.75,arcs:1,long:0.86},
+  ];
+  for(const an of anneaux){
+    cx.save();cx.translate(c.x,c.y);cx.rotate(tReacteur*an.v*E.vitesse);
+    cx.lineWidth=Math.max(1,R*an.e);cx.lineCap="round";cx.globalAlpha=an.a;cx.strokeStyle=E.milieu;
+    for(let i=0;i<an.arcs;i++){
+      const d0=(i/an.arcs)*Math.PI*2;
+      cx.beginPath();cx.arc(0,0,R*an.r,d0,d0+Math.PI*2*an.long/an.arcs);cx.stroke();
+    }
+    cx.restore();
+  }
+  cx.save();cx.translate(c.x,c.y);cx.globalAlpha=0.22;cx.strokeStyle=E.coeur;
+  cx.lineWidth=Math.max(1,R*0.006);
+  for(let i=0;i<60;i++){
+    const a=(i/60)*Math.PI*2,r0=R*0.36,r1=R*(i%5===0?0.42:0.39);
+    cx.beginPath();cx.moveTo(Math.cos(a)*r0,Math.sin(a)*r0);cx.lineTo(Math.cos(a)*r1,Math.sin(a)*r1);cx.stroke();
+  }
+  cx.restore();
+  const pulse=0.5+0.5*Math.sin(tReacteur*1.6*E.vitesse);
+  const coeur=cx.createRadialGradient(c.x,c.y,0,c.x,c.y,R*0.30);
+  coeur.addColorStop(0,"#ffffff");coeur.addColorStop(0.35,E.coeur);coeur.addColorStop(1,"rgba(0,0,0,0)");
+  cx.globalAlpha=0.55+0.35*pulse;cx.fillStyle=coeur;
+  cx.beginPath();cx.arc(c.x,c.y,R*0.30,0,7);cx.fill();
+  cx.globalAlpha=1;
+}
+function boucleReacteur(){
+  if(reacteurActif&&pageCourante==="tableau"){tReacteur+=0.016;dessinerReacteur();}
+  requestAnimationFrame(boucleReacteur);
+}
+
+/* ══ données périodiques ════════════════════════════════════════════════ */
 async function rafraichirEtat(){
   try{
     const j=await(await fetch("/api/etat")).json();
+    DERNIER_ETAT=j;
+    /* La bannière d'abord : c'est l'élément le plus visible du tableau de
+       bord. Si l'en-tête lève ensuite, le tableau reste renseigné. */
+    rendreBanniere();
     const pret=j.ollama;
     etat.innerHTML="";
     const point=document.createElement("b");
     point.className=pret?"":"hors";
     point.textContent=pret?"● prêt":"● Ollama éteint";
     etat.append(point,document.createTextNode(" · "+j.modele+" · "+j.outils+" outils · "+j.heure));
-  }catch(e){etat.textContent="hors ligne";}
+  }catch(e){
+    /* Ne pas avaler l'erreur en silence : un panneau qui affiche « hors ligne »
+       sans dire pourquoi est impossible à diagnostiquer. */
+    etat.textContent="hors ligne";
+    console.warn("panneau : /api/etat a échoué", e);
+  }
 }
 async function rafraichirProgression(){
   try{
@@ -498,15 +1068,16 @@ async function rafraichirDocuments(){
     for(const x of ds){
       const row=document.createElement("div");row.className="document";
       const a=document.createElement("a");a.href=x.url;a.download=x.nom;a.textContent=x.nom;
-      const s=document.createElement("span");s.className="petit";
-      s.textContent=(x.modifie||"")+" · "+Math.max(1,Math.round((x.taille||0)/1024))+" Ko";
-      row.append(a,s);documents.appendChild(row);
+      const sp=document.createElement("span");sp.className="petit";
+      sp.textContent=(x.modifie||"")+" · "+Math.max(1,Math.round((x.taille||0)/1024))+" Ko";
+      row.append(a,sp);documents.appendChild(row);
     }
   }catch(e){}
 }
 async function rafraichirSignaux(){
   try{
     const s=await(await fetch("/api/signaux")).json();
+    DERNIER_SIGNAUX=s;
     signaux.replaceChildren();
     for(const [k,v] of [["Batterie",s.batterie],["Disque",s.disque],["Système",s.systeme],
                         ["Réseau",s.reseau],["Erreurs JIBI",s.erreurs_jibi],["Documents",s.documents]]){
@@ -527,10 +1098,16 @@ async function rafraichirAudit(){
     }).join("\n"):"Aucun événement";
   }catch(e){audit.textContent="Audit indisponible";}
 }
+
+/* ══ branchements ═══════════════════════════════════════════════════════ */
 bouton.addEventListener("click",()=>envoyer());
 saisie.addEventListener("input",ajusterSaisie);
 saisie.addEventListener("keydown",e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();envoyer();}});
-window.addEventListener("resize",()=>{if(window.innerWidth>900){app.classList.remove("ouvert");app.classList.remove("replie");}});
+window.addEventListener("resize",()=>{
+  if(window.innerWidth>900){app.classList.remove("ouvert");
+    if(pageCourante!=="tableau")app.classList.remove("replie");}
+  dimensionnerReacteur();dessinerReacteur();
+});
 
 for(const r of RACCOURCIS){
   const b=document.createElement("button");b.textContent=r;
@@ -538,15 +1115,26 @@ for(const r of RACCOURCIS){
   $("raccourcis").appendChild(b);
 }
 bulle("Salut ! Je suis prêt. Écris, clique sur le micro ou demande-moi une analyse.",false);
-montrerPage("chat");
+
+/* premier affichage : tableau de bord plein cadre, puis les pages à la demande */
+dimensionnerReacteur();
+boucleReacteur();
+tickHorloge();
+montrerPage("tableau");
+$("tableau").classList.add("entree");
+
 rafraichirEtat();rafraichirDocuments();rafraichirProgression();rafraichirSignaux();
+rafraichirTableau();
+setInterval(tickHorloge,10000);
 setInterval(rafraichirEtat,10000);
 setInterval(rafraichirDocuments,5000);
 setInterval(rafraichirProgression,1200);
 setInterval(rafraichirSignaux,30000);
 setInterval(rafraichirAudit,60000);
 setInterval(rafraichirSessions,20000);
-ajusterSaisie();saisie.focus();
+setInterval(()=>{if(pageCourante==="tableau"){rendreSignaux();rendreSecurite();rendreActivite();}},30000);
+rafraichirSessions();
+ajusterSaisie();
 </script>
 </body>
 </html>

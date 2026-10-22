@@ -72,8 +72,17 @@ try:
     _reponse_secu = _ureq26.urlopen(
         f"http://127.0.0.1:{_port_secu}/api/securite").read()
     _secu = _json26.loads(_reponse_secu)
+    # Format tableau de bord : {verrous:[{cle,titre,ok,detail,source}], actifs,
+    # total}. Le contrôle vérifie le CONTRAT (lecture en direct, cohérence des
+    # compteurs) — pas un .env entièrement verrouillé : les verrous ouverts
+    # sciemment (cloud, déplacement auto, auto-modification du noyau…) sont
+    # affichés rouges à dessein. Seul « local » ne doit JAMAIS être ouvert.
+    _verrous_secu = _secu.get("verrous", [])
+    _cles_ok = all({"cle", "titre", "ok", "source"} <= set(v) for v in _verrous_secu)
+    _local_ok = all(v.get("ok") for v in _verrous_secu if v.get("cle") == "local")
     verif("panneau : /api/securite lit les verrous en direct",
-          _secu.get("tout") and len(_secu.get("verrous", [])) >= 5,
+          len(_verrous_secu) >= 5 and _cles_ok and _local_ok
+          and _secu.get("actifs") == sum(1 for v in _verrous_secu if v.get("ok")),
           str(_secu)[:80])
 finally:
     module_panneau.arreter()

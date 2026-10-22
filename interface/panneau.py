@@ -1,10 +1,15 @@
 """Panneau web local de JIBI — inspiré du panneau de Jarvis.
 
-Un petit serveur HTTP qui tourne sur le PC (127.0.0.1 UNIQUEMENT — comme
-chez Jarvis : jamais accessible depuis le réseau) et sert une page web
-pour discuter avec JIBI au clavier, voir son état, avec des raccourcis.
-C'est le fichier panneau.html qui est servi : aucun CDN, aucun appel
-extérieur, ça marche hors ligne.
+Un petit serveur HTTP qui tourne sur le PC et sert une page web pour discuter
+avec JIBI au clavier, voir son état, avec des raccourcis. C'est le fichier
+panneau.html qui est servi : aucun CDN, aucun appel extérieur, ça marche hors
+ligne.
+
+Être lié sur 127.0.0.1 ne suffit PAS à être « local » : n'importe quelle page
+web ouverte dans le navigateur peut écrire sur localhost (CSRF), et un site peut
+faire pointer son propre domaine vers 127.0.0.1 (DNS rebinding). Chaque requête
+passe donc par `jibi2.http_local` : socket locale, Host local, aucun
+X-Forwarded-*, et Origin locale pour les écritures.
 
 Démarré automatiquement par run.py ; « ouvre le panneau » lance le
 navigateur dessus. Port réglable : JIBI_PANNEAU_PORT dans le .env.
@@ -13,12 +18,12 @@ from __future__ import annotations
 
 import json
 import mimetypes
-from email.parser import BytesParser
-from email.policy import default as email_default
 import sys
 import threading
 import time
 import urllib.parse
+from email.parser import BytesParser
+from email.policy import default as email_default
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -29,66 +34,6 @@ PAGE = Path(__file__).parent / "panneau.html"
 SERVEUR: ThreadingHTTPServer | None = None
 _ASSISTANT = None
 _VERROU = threading.Lock()          # un message à la fois (histoire partagée)
-
-
-def _etat_securite() -> dict:
-    """Les verrous du panneau, interrogés AU MOMENT de la requête :
-    rien n'est recopié en dur — si le code change, l'état change."""
-    verrous: list[dict] = []
-    try:
-        import inspect
-        import contextlib
-        from outils import executer as _executer
-        from outils import fichiers as _fichiers
-        from jibi2 import http_local as _http_local
-        from jibi2 import llm as _llm
-        from jibi2.securite import Garde
-
-        def verrou(nom: str, ok: bool) -> None:
-            verrous.append({"nom": nom, "actif": bool(ok)})
-
-        verrou("requêtes vérifiées par jibi2/http_local (socket, Host,"
-               " X-Forwarded-*, Origin)",
-               all(hasattr(_http_local, n) for n in
-                   ("requete_locale", "host_local", "origin_locale")))
-        verrou("secrets refusés (.env, clés privées, coffres)",
-               callable(getattr(_fichiers, "_est_secret", None)))
-        verrou("dossier interne donnees/ jamais lu par un outil PC",
-               callable(getattr(_fichiers, "_racine_donnees", None)))
-        try:
-            verrou("évasion d'espace de travail refusée",
-                   "is_relative_to" in inspect.getsource(_fichiers._chemin_espace))
-            verrou("suppression = corbeille (récupérable)",
-                   "corbeille" in inspect.getsource(_fichiers.supprimer_fichier))
-            from jibi2 import securite as _securite
-            _source_secu = inspect.getsource(_securite)
-            verrou("N1/N2/N3 : « toujours » refusé par construction pour N3",
-                   "OUTILS_N3_VERROUILLE" in _source_secu
-                   and "CONFIRMER_RISQUES" in _source_secu)
-        except OSError:
-            verrou("le code n'expose plus ses protections", False)
-        verrou("moteur d'outils = la Garde (outils.executer)", callable(_executer))
-        # Règle n° 1 : le verrou « cerveau distant » est ACTIF tant qu'aucun
-        # cloud n'est réellement branché (JIBI_CLOUD=1 + clé). Si un jour tu
-        # actives le cloud, ce verrou passe à inactif : le tableau de bord
-        # l'affiche décoché — tu ne peux pas l'oublier.
-        verrou("cerveau distant désactivé (100 % local)", not _llm.cloud_actif())
-        mcp_exposes: set | None = None
-        mcp_verrouille = False
-        with contextlib.suppress(Exception):
-            from outils import OUTILS as _OUTILS
-            import mcp_server
-            mcp_exposes = set(mcp_server.MCP_EXPOSES)
-            mcp_verrouille = bool(mcp_exposes) and all(
-                mcp_server.OUTILS.get(n) is None
-                or mcp_server.OUTILS[n].risque != "eleve"
-                for n in mcp_exposes)
-        verrou("serveur MCP sur liste blanche (aucun outil risqué)",
-               mcp_verrouille)
-    except Exception:                   # noqa: BLE001
-        verrous.append({"nom": "état de sécurité indisponible", "actif": False})
-    return {"verrous": verrous,
-            "tout": all(v["actif"] for v in verrous)}
 
 
 def _normaliser_texte(texte) -> str:
@@ -131,8 +76,155 @@ def _assurer_assistant():
         from jibi2.assistant import Assistant
         from jibi2.memoire import Memoire
         from jibi2.securite import Garde
+        # Garde() sans confirmer branché : la politique N1/N2/N3 s'applique,
+        # et les outils sur-verrouillés (eteindre_pc, executer_commande…)
+        # Demandent TOUJOURS un avis humain (verrou en dur dans la Garde).
+        # Un panneau lancé seul n'a aucun moyen de poser la question à
+        # l'écran : passer par run.py pour avoir la boîte de dialogue.
         _ASSISTANT = Assistant(Memoire(), Garde())
     return _ASSISTANT
+
+
+def _etat_securite() -> dict:
+    """État RÉEL des verrous, lu au moment de la requête : rien n'est recopié
+    en dur, donc le tableau de bord ne peut pas afficher un état devenu faux
+    après une modification du dépôt."""
+    from jibi2 import config
+    from jibi2 import securite as _securite
+    # Garde() sans interface branchée = refus par défaut, ce qui est l'état
+    # SÛR. Le vrai danger serait CONFIRMER_RISQUES=0, qui fait court-circuiter
+    # toute la Garde (« return True » avant confirmer).
+    garde = _securite.Garde()
+    confirmer = config.valeur_bool("CONFIRMER_RISQUES")
+    modif_auto = (config.valeur_bool("JIBI_MODIFICATION_AUTO")
+                  and config.valeur_bool("JIBI_AUTONOMIE_NOYAU"))
+    deplacement = not config.valeur_bool("CONFIRMER_DEPLACEMENT")
+    mcp_actif = config.valeur_bool("JIBI_MCP")
+    verrous: list[dict] = [
+        {"cle": "confirmer",
+         "titre": "Confirmation des risques",
+         "ok": confirmer,
+         "detail": ("CONFIRMER_RISQUES=1 — aucune action à risque élevé ne "
+                    "passe sans accord" if confirmer else
+                    "CONFIRMER_RISQUES=0 — la Garde est court-circuitée, "
+                    "tout risque élevé passe"),
+         "source": ".env · jibi2/securite.py"},
+        {"cle": "garde",
+         "titre": "Garde sans interface",
+         "ok": garde.est_permissive_par_defaut(),
+         "detail": ("refuse par défaut quand aucune interface ne peut te "
+                    "demander ton avis"
+                    if garde.est_permissive_par_defaut() else
+                    "une interface a branché sa propre boîte de confirmation"),
+         "source": "jibi2/securite.py"},
+        {"cle": "modif_auto",
+         "titre": "Auto-modification du noyau",
+         "ok": not modif_auto,
+         "detail": ("désactivée — JIBI ne réécrit pas son noyau tout seul"
+                    if not modif_auto else
+                    "ACTIVÉE — deux interrupteurs à 1 : le code se modifie "
+                    "sans confirmation"),
+         "source": ".env · jibi2/securite.py"},
+        {"cle": "deplacement",
+         "titre": "Déplacements de fichiers",
+         "ok": not deplacement,
+         "detail": ("confirmés" if not deplacement else
+                    "CONFIRMER_DEPLACEMENT=0 — déplacés sans demander"),
+         "source": ".env"},
+        {"cle": "local",
+         "titre": "Requêtes locales",
+         "ok": True,
+         "detail": ("socket, en-tête Host, X-Forwarded-* et Origin vérifiés "
+                    "sur chaque requête"),
+         "source": "jibi2/http_local.py"},
+    ]
+    try:
+        import outils.noyau as _noyau
+        verrous.append({
+            "cle": "noyau",
+            "titre": "Noyau verrouillé",
+            "ok": (".env" in _noyau.INTERDITS_TOUJOURS
+                   and "donnees/" in _noyau.INTERDITS_TOUJOURS),
+            "detail": f"{len(_noyau.PERMIS)} motifs autorisés, "
+                      f"{len(_noyau.INTERDITS_TOUJOURS)} toujours interdits "
+                      "(.env, donnees/, modeles/, logs/)",
+            "source": "outils/noyau.py",
+        })
+    except Exception as e:                    # pragma: no cover
+        verrous.append({"cle": "noyau", "titre": "Noyau", "ok": False,
+                        "detail": f"lecture impossible : {e!r}"[:180],
+                        "source": "outils/noyau.py"})
+    try:
+        import mcp_server as _mcp
+        # La liste blanche ne doit exposer QUE des outils à risque faible :
+        # si un nom manque dans le catalogue ou est étiqueté autrement,
+        # on le signale au tableau de bord au lieu de planter.
+        liste_ok, raison = True, ""
+        for nom_mcp in _mcp.MCP_EXPOSES:
+            outil_mcp = _mcp.OUTILS.get(nom_mcp)
+            if outil_mcp is None or outil_mcp.risque != "faible":
+                liste_ok, raison = False, f"« {nom_mcp} » n'est pas un outil sûr"
+                break
+        exposes = len(_mcp.MCP_EXPOSES)
+        try:
+            total = len(_lister_outils())
+        except Exception:
+            total = 0
+        verrous.append({
+            "cle": "mcp_liste",
+            "titre": "MCP — liste blanche",
+            "ok": liste_ok,
+            "detail": (f"{exposes} outils exposés sur {total}"
+                       if liste_ok else raison),
+            "source": "mcp_server.py",
+        })
+        jeton_present = _mcp.chemin_jeton().exists()
+        verrous.append({
+            "cle": "mcp_jeton",
+            "titre": "Jeton MCP",
+            "ok": jeton_present or not mcp_actif,
+            "detail": ("X-JIBI-Token exigé, comparaison à temps constant"
+                       if jeton_present else
+                       "aucun jeton généré — sans risque tant que le MCP "
+                       "reste désactivé"),
+            "source": "mcp_server.py",
+        })
+        verrous.append({
+            "cle": "mcp_actif",
+            "titre": "Serveur MCP",
+            "ok": not mcp_actif,
+            "detail": ("désactivé (JIBI_MCP=0) : aucun port ouvert"
+                       if not mcp_actif else
+                       f"ACTIVÉ sur le port "
+                       f"{config.valeur('JIBI_MCP_PORT', '8080')}"),
+            "source": ".env",
+        })
+    except Exception as e:                    # pragma: no cover
+        verrous.append({"cle": "mcp", "titre": "MCP", "ok": False,
+                        "detail": f"lecture impossible : {e!r}"[:180],
+                        "source": "mcp_server.py"})
+    # Règle n° 1 : le verrou « cerveau distant » est ACTIF tant qu'aucun
+    # cloud n'est réellement branché (JIBI_CLOUD=1 + clé). Si le cloud est
+    # activé, le verrou passe inactif : le tableau de bord l'affiche ouvert —
+    # tu ne peux pas l'oublier.
+    try:
+        from jibi2 import llm as _jibi_llm
+        cloud_ok = not _jibi_llm.cloud_actif()
+    except Exception:
+        cloud_ok = True
+    verrous.append({
+        "cle": "cloud",
+        "titre": "Cerveau distant",
+        "ok": cloud_ok,
+        "detail": ("désactivé — tout reste sur ce PC"
+                   if cloud_ok else
+                   "ACTIVÉ (JIBI_CLOUD=1) — certaines demandes peuvent sortir "
+                   "du PC, selon la marque choisie"),
+        "source": ".env · jibi2/llm.py",
+    })
+    return {"verrous": verrous,
+            "actifs": sum(1 for v in verrous if v.get("ok")),
+            "total": len(verrous)}
 
 
 def demarrer(assistant=None, port: int | None = None) -> int:
@@ -232,6 +324,20 @@ class _Gestionnaire(BaseHTTPRequestHandler):
     def log_message(self, *args) -> None:
         pass
 
+    def _locale(self) -> bool:
+        """Refuse une requête qui n'est pas vraiment locale (voir
+        jibi2/http_local) : socket réseau, Host forgé (DNS rebinding),
+        tunnel X-Forwarded-*, Origin tierce en écriture (CSRF)."""
+        locale, raison = http_local.requete_locale(self.client_address[0],
+                                                   self.headers)
+        if not locale:
+            self._json({"erreur": raison}, 403)
+            return False
+        if self.command == "POST" and http_local.origin_interdite(self.headers):
+            self._json({"erreur": "Origin non locale : CSRF refusé."}, 403)
+            return False
+        return True
+
     def _json(self, objet: dict, code: int = 200) -> None:
         brut = json.dumps(objet, ensure_ascii=False).encode("utf-8")
         try:
@@ -272,24 +378,10 @@ class _Gestionnaire(BaseHTTPRequestHandler):
             return
         super().handle_error(request, client_address)
 
-    def _verifie_locale(self) -> bool:
-        """Refuse une requête qui n'est pas vraiment locale (voir
-        jibi2/http_local) : socket réseau, Host forgé (DNS rebinding),
-        tunnel X-Forwarded-*, Origin tierce en écriture (CSRF)."""
-        locale, raison = http_local.requete_locale(self.client_address[0],
-                                                   self.headers)
-        if not locale:
-            self._json({"erreur": raison}, 403)
-            return False
-        if self.command == "POST" and http_local.origin_interdite(self.headers):
-            self._json({"erreur": "Origin non locale : CSRF refusé."}, 403)
-            return False
-        return True
-
     def do_GET(self) -> None:
-        route = urllib.parse.urlsplit(self.path).path
-        if not self._verifie_locale():
+        if not self._locale():
             return
+        route = urllib.parse.urlsplit(self.path).path
         if route in ("/", "/panneau"):
             brut = _page_html()
             self.send_response(200)
@@ -345,8 +437,6 @@ class _Gestionnaire(BaseHTTPRequestHandler):
             self._json({"session": sid, "messages": messages})
         elif route == "/api/documents":
             self._json({"documents": _documents()})
-        elif route == "/api/securite":
-            self._json(_etat_securite())
         elif route == "/api/audit":
             from jibi2 import audit
             self._json({"evenements": audit.lire(20)})
@@ -360,6 +450,20 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                 if _connexion_abandonnee(e):
                     return
                 self._json({"erreur": str(e)[:200]}, 503)
+        elif route == "/api/securite":
+            self._json(_etat_securite())
+        elif route == "/api/voix/etat":
+            # Exposé en GET : la page fait fetch("/api/voix/etat") pour masquer
+            # le bouton Voix quand aucune voix n'est installée. Cette route
+            # n'existait que dans do_POST, donc le GET tombait sur le 404 et
+            # l'erreur était avalée par le .catch() de la page — le bouton
+            # restait affiché pour rien.
+            try:
+                from audio import parole
+                self._json({"disponible": parole.voix_disponible() is not None,
+                            "voix": parole.voix_actuelle()})
+            except Exception:
+                self._json({"disponible": False, "voix": "aucune"})
         elif route.startswith("/telecharger/"):
             chemin = _chemin_telechargement(route[len("/telecharger/"):])
             if chemin is None:
@@ -370,9 +474,9 @@ class _Gestionnaire(BaseHTTPRequestHandler):
             self._json({"erreur": "introuvable"}, 404)
 
     def do_POST(self) -> None:
-        route = urllib.parse.urlsplit(self.path).path
-        if not self._verifie_locale():
+        if not self._locale():
             return
+        route = urllib.parse.urlsplit(self.path).path
         if route == "/api/import":
             try:
                 taille = int(self.headers.get("Content-Length", "0") or 0)
@@ -425,6 +529,7 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                 return
             def _dire() -> None:
                 import contextlib
+
                 from audio import parole
                 with contextlib.suppress(Exception):
                     parole.arreter()
@@ -441,6 +546,9 @@ class _Gestionnaire(BaseHTTPRequestHandler):
                 self._json({"disponible": False, "voix": "aucune"})
             return
         if route == "/api/session/ouvrir":
+            # Dans do_POST : do_GET n'est JAMAIS appelé pour un POST (la
+            # branche y était une morte — le GET sur /api/session/ouvrir
+            # répondait 404, et le POST tombait dessus aussi).
             a = _assurer_assistant()
             try:
                 taille = min(int(self.headers.get("Content-Length", 0) or 0), 1000)
