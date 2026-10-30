@@ -75,6 +75,7 @@ def charger_integres() -> None:
         design,
         documents,
         fichiers,
+        fuites,
         imports,
         jeux,
         memoire_faits,
@@ -226,6 +227,9 @@ DOMAINES: tuple[tuple[str, tuple[str, ...]], ...] = (
         "restaurer_noyau", "ameliorer_autonomement", "configurer_autonomie",
         "statut_autonomie", "consulter_audit", "lire_progression")),
     (r"routine|chaque (jour|matin|soir)", ("executer_workflow", "supprimer_workflow")),
+    (r"fuite|fuites de donnees|fuite de donnees|pwned|powned|breach|leak[ -]?(list|search)?|"
+     r"mot de passe.*fuite|fuite.*mot de passe|compromis|maillinfiltr|mes fuites",
+     ("verifier_fuite_mot_de_passe", "verifier_fuites_email")),
 )
 
 

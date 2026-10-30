@@ -53,6 +53,7 @@ import m36_vitesse_cpu
 import m37_bench_env
 import m38_chaine_web_amelioration
 import m39_outillage
+import m40_fuites
 
 print("────────────────────────────────────────────────")
 print(f"{moteur.stats['ok']}/{moteur.stats['ok'] + moteur.stats['ko']} OK")
